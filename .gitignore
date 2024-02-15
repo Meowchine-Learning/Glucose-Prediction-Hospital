@@ -6,6 +6,12 @@ __pycache__/
 # C extensions
 *.so
 
+# csv files
+.csv
+
+# excel files
+.xisx
+
 # Distribution / packaging
 .Python
 build/
