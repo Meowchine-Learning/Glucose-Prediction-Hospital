@@ -7,10 +7,10 @@ __pycache__/
 *.so
 
 # csv files
-.csv
+*.csv
 
 # excel files
-.xisx
+*.xlsx
 
 # Distribution / packaging
 .Python
