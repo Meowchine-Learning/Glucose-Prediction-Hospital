@@ -17,6 +17,8 @@ def main():
     med_orders = df_map["MEDICATION_ORDERS"]
     pin = df_map["PIN"]
 
+    clean_admit(admit_dx)
+
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
 
@@ -26,7 +28,7 @@ def clean_admit(df_file):
 
 
 def write_to_csv(df_file, name):
-    df_file.to_csv("data/"+name+".csv", index=None, header=True)
+    df_file.to_csv("data/"+name+".csv", header=True)
 
 
 def preprocess_data(df_file, name):
