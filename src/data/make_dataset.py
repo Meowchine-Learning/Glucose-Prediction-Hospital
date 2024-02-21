@@ -5,7 +5,7 @@ import json
 def main():
 
     df_map = pd.read_excel(
-        "data/ACCESS 1853 Dataset.xlsx", sheet_name=None)
+        "data/ACCESS 1853 Dataset.xlsx", sheet_name=None, index_col=0)
 
     encounters = df_map["ENCOUNTERS"]
     admit_dx = df_map["ADMIT_DX"]
@@ -19,6 +19,10 @@ def main():
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
+
+
+def clean_admit(df_file):
+    pass
 
 
 def write_to_csv(df_file, name):
