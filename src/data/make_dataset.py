@@ -24,9 +24,9 @@ def main():
 
 
 def clean_admit(df):
-    codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3,I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0,I50.9", "CHF": "I50.0",
+    codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3, I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0, I50.9", "CHF": "I50.0",
              "AORTIC STENOSIS": "I35.0",  "Valvular heart failure": "I38",  # 10 & #11
-             "STEMI": ("I21.3, R94.30"), "NSTEMI exacerbation": "I21.4, R94.31", "NSTEMI": "I21.4, R94.31", "Acute MI": "I21.9",
+             "STEMI": "I21.3, R94.30", "NSTEMI exacerbation": "I21.4, R94.31", "NSTEMI": "I21.4, R94.31", "Acute MI": "I21.9",
              "Chest pain and SOB": "R07.4, R06.0", "Chest Pain": "R07.4", "SOB": "R06.0",
              "Infected Endocarditis": "I33.0", "Endocarditis": "I38",
 
@@ -48,13 +48,17 @@ def clean_admit(df):
              "Afib, new onset": "I48.90",
              }
 
-    # print(df[df['CURRENT_ICD10_LIST'] == 'I25.19'].index)
+    codes = {k.lower(): v for k, v in codes.items()}
+
     list = df[(df['CURRENT_ICD10_LIST'].notnull()) == False].index
 
     for i in range(len(list)):
-        if df.at[list[i], "ADMIT_DIAG_TEXT"] in codes:
-            df.loc[list[i], "CURRENT_ICD10_LIST"] = codes[df.at[list[i],
-                                                                "ADMIT_DIAG_TEXT"]]
+        if not isinstance(df.at[list[i], "ADMIT_DIAG_TEXT"], float):
+            dx = df.at[list[i], "ADMIT_DIAG_TEXT"].lower()
+        else:
+            dx = df.at[list[i], "DX_NAME"].lower()
+        if dx in codes:
+            df.loc[list[i], "CURRENT_ICD10_LIST"] = codes[dx]
             # print(df.loc[list[i]])
 
     # TODO: make it case insensitive
