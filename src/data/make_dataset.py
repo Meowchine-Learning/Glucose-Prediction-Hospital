@@ -60,8 +60,8 @@ def clean_admit(df):
         if dx in codes:
             df.loc[list[i], "CURRENT_ICD10_LIST"] = codes[dx]
             # print(df.loc[list[i]])
-
-    # TODO: make it case insensitive
+        else:
+            df.drop(list[i], axis=0, inplace=True)
 
     # QUESTION #1: SAH same as I60.9 (Subarachnoid bleed)?
     # QUESTION #2: Is SOB the same as SOBOE?
