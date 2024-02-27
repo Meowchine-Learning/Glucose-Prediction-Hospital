@@ -43,14 +43,14 @@ lstm_model.add(Dense(1, "linear"))
 
 lstm_model.summary()
 
-cp = ModelCheckpoint('lstm_model/', save_best_only = True)
+cp = ModelCheckpoint('models/lstm_model/', save_best_only = True)
 lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.0001), metrics = [RootMeanSquaredError()])
 
 lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbakcs=[cp])
 
 
 #Loading Model:
-lstm_model = load_model("lstm_model/")
+lstm_model = load_model("models/lstm_model/")
 
 #Performance on training data
 train_predictions = lstm_model.predict(X_train).flatten()
@@ -72,5 +72,3 @@ test_results = pd.DataFrame(data={"Train Predictions":test_predictions, 'Actuals
 
 plt.plot(test_results['Train Predictions'][:100])
 plt.plot(test_results['Actuals'][:100])
-
-
