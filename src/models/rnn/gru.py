@@ -48,7 +48,7 @@ X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.sha
 #Creating GRU model:
 
 gru_model = Sequential()
-gru_model.add(GRU(3,activation="tanh",recurrent_activation="sigmoid",input_shape=(X_train.shape(1),X_train.shape(2))))
+gru_model.add(GRU(3,activation="tanh",recurrent_activation="sigmoid",input_shape=(X_train.shape(1),X_train.shape(2)), return_sequences= False))
 gru_model.add(Dropout(rate=0.2))
 gru_model.add(Dense(1))
 

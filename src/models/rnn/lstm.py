@@ -50,6 +50,7 @@ X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.sha
 lstm_model = Sequential()
 lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape(1), X_train.shape(2)), return_sequences = True))
 lstm_model.add(LSTM(32, activation='relu', return_sequences = False))
+lstm_model.add(Dropout(rate=0.2))
 lstm_model.add(Dense(1, "linear"))
 
 lstm_model.summary()
