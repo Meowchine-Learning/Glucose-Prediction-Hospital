@@ -18,6 +18,7 @@ def main():
     pin = df_map["PIN"]
 
     clean_admit(admit_dx)
+    df_map['LABS'] = clean_labs(labs)
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
@@ -99,7 +100,12 @@ def clean_admit(df):
     # "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads"
     # "liver biopsy VAD patient", "CABG", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "Heart tx", "NSTEMI/CABG", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "NSTEMI/wtg CABG"
 
+def clean_labs(df):
+    # The ratio of missing data is really small
+    # drop all the None value
+    return pd.DataFrame.dropna(df)
 
+    
 def write_to_csv(df_file, name):
     df_file.to_csv("data/"+name+".csv", header=True, index=False)
 
