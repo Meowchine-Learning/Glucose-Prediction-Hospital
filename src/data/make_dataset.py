@@ -18,12 +18,15 @@ def main():
     pin = df_map["PIN"]
 
     clean_admit(admit_dx)
+    clean_med_admin(med_admin)
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
 
 
 def clean_admit(df):
+
+    # missing codes
     codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3, I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0, I50.9", "CHF": "I50.0",
              "AORTIC STENOSIS": "I35.0",   # 10 & 11
              "STEMI": "I21.3, R94.30", "NSTEMI exacerbation": "I21.4, R94.31", "NSTEMI": "I21.4, R94.31", "Acute MI": "I21.9",
@@ -49,21 +52,26 @@ def clean_admit(df):
              "Afib, new onset": "I48.90",
              }
 
+    # turn all to lowercase
     codes = {k.lower(): v for k, v in codes.items()}
 
+    # drop dx_id column
     df.drop('DX_ID', axis=1, inplace=True)
 
+    # get a list of the indices where the code cell is missing
     list = df[(df['CURRENT_ICD10_LIST'].notnull()) == False].index
 
+    # fill in missing codes
     for i in range(len(list)):
-        if not isinstance(df.at[list[i], "ADMIT_DIAG_TEXT"], float):
+        # check if free text cell is non-empty
+        if isinstance(df.at[list[i], "ADMIT_DIAG_TEXT"], str):
             dx = df.at[list[i], "ADMIT_DIAG_TEXT"].lower()
         else:
-            dx = df.at[list[i], "DX_NAME"].lower()
+            dx = df.at[list[i], "DX_NAME"].lower()  # if missing, use DX_Name
         if dx in codes:
             df.loc[list[i], "CURRENT_ICD10_LIST"] = codes[dx]
-            # print(df.loc[list[i]])
         else:
+            # drop rows where we don't know know the code
             df.drop(list[i], axis=0, inplace=True)
 
     # QUESTION #2: Is SOB the same as SOBOE?    Not necesserily the same
@@ -105,6 +113,28 @@ def clean_admit(df):
     # extra:
     # "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads"
     # "liver biopsy VAD patient", "CABG", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "Heart tx", "NSTEMI/CABG", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "NSTEMI/wtg CABG"
+
+
+def clean_med_admin(df):
+
+    # drop ATC codes
+    df.drop('MEDICATION_ATC', axis=1, inplace=True)
+
+    # missing routes for meds
+    med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
+                  6000183: "intravenous", 174845: "oral", 2365: "intravenous", 33009: "oral"}
+
+    # insulin_list = ["17405", "28534", "30080", "124838", "124845", "124847", "124854", "124857", "125482", "130342", "134056", "162674", "166114", "169138", "199429", "4002243",
+    #                "4002245", "4002455", "4002541", "4002722", "4002723", "4002884", "4002908", "4002909", "6000598", "6001625", "6002910", "6004503", "6004606"]
+
+    # QUESTION: what to do when columns I-M are empty?
+
+    # get rows where route is empty
+    list = df[(df['ROUTE'].notnull()) == False].index
+
+    for i in range(len(list)):
+        df.loc[list[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[list[i],
+                                                                  "MEDICATION_ID"]]    # fill in missing routes
 
 
 def write_to_csv(df_file, name):
