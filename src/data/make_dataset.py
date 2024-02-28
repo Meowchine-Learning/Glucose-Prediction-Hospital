@@ -111,17 +111,17 @@ def clean_admit(df):
 def clean_med_admin(df):
     df.drop('MEDICATION_ATC', axis=1, inplace=True)
 
-    med_routes = {"4000287": "oral", "124838": "subcutaneous", "2365": "intravenous", "4002245": "intravenous",
-                  "6000183": "intravenous", "174845": "oral", "2365": "intravenous", "33009": "oral"}
+    med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
+                  6000183: "intravenous", 174845: "oral", 2365: "intravenous", 33009: "oral"}
 
-    insulin_list = ["17405", "28534", "30080", "124838", "124845", "124847", "124854", "124857", "125482", "130342", "134056", "162674", "166114", "169138", "199429", "4002243",
-                    "4002245", "4002455", "4002541", "4002722", "4002723", "4002884", "4002908", "4002909", "6000598", "6001625", "6002910", "6004503", "6004606"]
+    # insulin_list = ["17405", "28534", "30080", "124838", "124845", "124847", "124854", "124857", "125482", "130342", "134056", "162674", "166114", "169138", "199429", "4002243",
+    #                "4002245", "4002455", "4002541", "4002722", "4002723", "4002884", "4002908", "4002909", "6000598", "6001625", "6002910", "6004503", "6004606"]
 
     # QUESTION: what to do when columns I-M are empty?
 
-    for i in range(len(list)):
-        if not isinstance(df.loc[i, "ROUTE"], float):
-            df.loc[df[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[i, "MEDICATION_ID"]]
+    for i in range(len(df)):
+        if not isinstance(df.loc[i, "ROUTE"], str):
+            df.loc[i, "CURRENT_ICD10_LIST"] = med_routes[df.loc[i, "MEDICATION_ID"]]
 
 
 def write_to_csv(df_file, name):
