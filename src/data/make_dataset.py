@@ -25,6 +25,8 @@ def main():
 
 
 def clean_admit(df):
+
+    # missing codes
     codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3, I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0, I50.9", "CHF": "I50.0",
              "AORTIC STENOSIS": "I35.0",   # 10 & 11
              "STEMI": "I21.3, R94.30", "NSTEMI exacerbation": "I21.4, R94.31", "NSTEMI": "I21.4, R94.31", "Acute MI": "I21.9",
@@ -50,21 +52,26 @@ def clean_admit(df):
              "Afib, new onset": "I48.90",
              }
 
+    # turn all to lowercase
     codes = {k.lower(): v for k, v in codes.items()}
 
+    # drop dx_id column
     df.drop('DX_ID', axis=1, inplace=True)
 
+    # get a list of the indices where the code cell is missing
     list = df[(df['CURRENT_ICD10_LIST'].notnull()) == False].index
 
+    # fill in missing codes
     for i in range(len(list)):
-        if not isinstance(df.at[list[i], "ADMIT_DIAG_TEXT"], float):
+        # check if free text cell is non-empty
+        if isinstance(df.at[list[i], "ADMIT_DIAG_TEXT"], str):
             dx = df.at[list[i], "ADMIT_DIAG_TEXT"].lower()
         else:
-            dx = df.at[list[i], "DX_NAME"].lower()
+            dx = df.at[list[i], "DX_NAME"].lower()  # if missing, use DX_Name
         if dx in codes:
             df.loc[list[i], "CURRENT_ICD10_LIST"] = codes[dx]
-            # print(df.loc[list[i]])
         else:
+            # drop rows where we don't know know the code
             df.drop(list[i], axis=0, inplace=True)
 
     # QUESTION #2: Is SOB the same as SOBOE?    Not necesserily the same
@@ -109,8 +116,11 @@ def clean_admit(df):
 
 
 def clean_med_admin(df):
+
+    # drop ATC codes
     df.drop('MEDICATION_ATC', axis=1, inplace=True)
 
+    # missing routes for meds
     med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
                   6000183: "intravenous", 174845: "oral", 2365: "intravenous", 33009: "oral"}
 
@@ -119,9 +129,12 @@ def clean_med_admin(df):
 
     # QUESTION: what to do when columns I-M are empty?
 
-    for i in range(len(df)):
-        if not isinstance(df.loc[i, "ROUTE"], str):
-            df.loc[i, "CURRENT_ICD10_LIST"] = med_routes[df.loc[i, "MEDICATION_ID"]]
+    # get rows where route is empty
+    list = df[(df['ROUTE'].notnull()) == False].index
+
+    for i in range(len(list)):
+        df.loc[list[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[list[i],
+                                                                  "MEDICATION_ID"]]    # fill in missing routes
 
 
 def write_to_csv(df_file, name):
