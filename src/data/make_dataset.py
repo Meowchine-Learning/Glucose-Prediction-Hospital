@@ -18,10 +18,13 @@ def main():
     pin = df_map["PIN"]
 
     clean_admit(admit_dx)
+    clean_PIN(pin)
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
 
+def clean_PIN(df):
+    df.drop(columns=["SUPP_DRUG_ATC_CODE"])
 
 def clean_admit(df):
     codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3,I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0,I50.9", "CHF": "I50.0",
