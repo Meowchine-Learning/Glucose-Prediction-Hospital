@@ -18,6 +18,7 @@ def main():
     pin = df_map["PIN"]
 
     clean_admit(admit_dx)
+    df_map['LABS'] = clean_labs(labs)
     clean_med_admin(med_admin)
 
     for key in df_map.keys():
@@ -113,6 +114,11 @@ def clean_admit(df):
     # extra:
     # "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads"
     # "liver biopsy VAD patient", "CABG", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "Heart tx", "NSTEMI/CABG", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "NSTEMI/wtg CABG"
+
+def clean_labs(df):
+    # The ratio of missing data is really small
+    # drop all the None value
+    return pd.DataFrame.dropna(df)
 
 
 def clean_med_admin(df):
