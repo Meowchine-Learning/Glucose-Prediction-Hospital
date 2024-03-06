@@ -1,11 +1,11 @@
 import pandas as pd
-import numpy as np
+import json
 
 
 def main():
 
     df_map = pd.read_excel(
-        "data/ACCESS 1853 Dataset.xlsx", sheet_name=None)
+        "ACCESS 1853 Dataset.xlsx", sheet_name=None)
 
     encounters = df_map["ENCOUNTERS"]
     admit_dx = df_map["ADMIT_DX"]
@@ -144,7 +144,7 @@ def clean_med_admin(df):
 
 
 def write_to_csv(df_file, name):
-    df_file.to_csv("data/"+name+".csv", header=True, index=False)
+    df_file.to_csv(name+".csv", index=None, header=True)
 
 
 def preprocess_data(df_file, name):
