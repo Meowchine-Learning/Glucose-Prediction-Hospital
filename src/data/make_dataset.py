@@ -5,24 +5,37 @@ import json
 def main():
 
     df_map = pd.read_excel(
-        "ACCESS 1853 Dataset.xlsx", sheet_name=None)
+    "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
 
     encounters = df_map["ENCOUNTERS"]
     admit_dx = df_map["ADMIT_DX"]
-    OR_orders = df_map["OR_PROC_ORDERS"]
-    orders = df_map["ORDERS"]
-    orders_qs = df_map["ORDER_QUESTIONS"]
+    or_proc_orders = df_map["OR_PROC_ORDERS"]
+    orders_activity = df_map["ORDERS_ACTIVITY"]
+    orders_nutrition = df_map["ORDERS_NUTRITION"]
     labs = df_map["LABS"]
     med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
-    med_orders = df_map["MEDICATION_ORDERS"]
     pin = df_map["PIN"]
 
+    clean_encounters(encounters)
     clean_admit(admit_dx)
-    df_map['LABS'] = clean_labs(labs)
+    clean_or_proc_orders(or_proc_orders)
+    clean_orders_activiy(orders_activity)
+    clean_orders_nutrition(orders_nutrition)
+    clean_labs(labs)
     clean_med_admin(med_admin)
+    clean_pin(pin)
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
+
+def clean_encounters(df):
+    # drop A1C columns
+    df.drop(['PRE_ADMISSION_A1C', 'A1C_DAYS'], axis=1, inplace=True)
+
+    # find/remove rows with empty heights
+    empty_heights = df[(df['HEIGHT_CM'].notnull()) == False].index
+
+    df.drop(empty_heights, axis=0, inplace=True)
 
 
 def clean_admit(df):
@@ -121,6 +134,36 @@ def clean_labs(df):
     return pd.DataFrame.dropna(df)
 
 
+def clean_or_proc_orders(df):
+    # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
+    df.drop([3, 4, 5, 6, 7, 8, 9, 10, 11], axis=1, inplace=True)
+
+
+def clean_orders_activiy(df):
+    # drop PROC_NAME, ORDER_PROC_ID
+    df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
+
+
+def clean_orders_nutrition(df):
+    # drop PROC_NAME, ORDER_PROC_ID
+    df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
+
+    # find/remove rows with empty DISCON_HRS
+    empty_discon = df[(df['ORDER_DISCON_TOD'].notnull()) == False].index
+
+    df.drop(empty_discon, axis=0, inplace=True)
+
+
+def clean_labs(df):
+    # drop COMPONENT_NAME, EXTERNAL_NAME, REFERENCE_UNIT
+    df.drop(['COMPONENT_NAME', 'EXTERNAL_NAME', 'REFERENCE_UNIT'], axis=1, inplace=True)
+
+    # find/remove rows with empty ORD_VALUE
+    empty_ord = df[(df['ORD_VALUE'].notnull()) == False].index
+
+    df.drop(empty_ord, axis=0, inplace=True)
+
+
 def clean_med_admin(df):
 
     # drop ATC codes
@@ -141,6 +184,11 @@ def clean_med_admin(df):
     for i in range(len(list)):
         df.loc[list[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[list[i],
                                                                   "MEDICATION_ID"]]    # fill in missing routes
+
+
+def clean_pin(df):
+     # drop everything but STUDY_ID, DISP_DAYS_PRIOR, SUPP_DRUG_ATC_CODE
+    df.drop([1, 4, 5, 6, 7, 8, 9], axis=1, inplace=True)
 
 
 def write_to_csv(df_file, name):
