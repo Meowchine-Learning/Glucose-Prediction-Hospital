@@ -131,19 +131,32 @@ def clean_admit(df):
 
 def clean_or_proc_orders(df):
     # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
-    df.drop(['PROC_NAME'], axis=1, inplace=True)
-
-
-def clean_orders_activiy(df):
     df.drop([3, 4, 5, 6, 7, 8, 9, 10, 11], axis=1, inplace=True)
 
 
+def clean_orders_activiy(df):
+    # drop PROC_NAME, ORDER_PROC_ID
+    df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
+
+
 def clean_orders_nutrition(df):
-    pass
+    # drop PROC_NAME, ORDER_PROC_ID
+    df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
+
+    # find/remove rows with empty DISCON_HRS
+    empty_discon = df[(df['ORDER_DISCON_TOD'].notnull()) == False].index
+
+    df.drop(empty_discon, axis=0, inplace=True)
 
 
 def clean_labs(df):
-    pass
+    # drop COMPONENT_NAME, EXTERNAL_NAME, REFERENCE_UNIT
+    df.drop(['COMPONENT_NAME', 'EXTERNAL_NAME', 'REFERENCE_UNIT'], axis=1, inplace=True)
+
+    # find/remove rows with empty ORD_VALUE
+    empty_ord = df[(df['ORD_VALUE'].notnull()) == False].index
+
+    df.drop(empty_ord, axis=0, inplace=True)
 
 
 def clean_med_admin(df):
@@ -169,7 +182,8 @@ def clean_med_admin(df):
 
 
 def clean_pin(df):
-    pass
+     # drop everything but STUDY_ID, DISP_DAYS_PRIOR, SUPP_DRUG_ATC_CODE
+    df.drop([1, 4, 5, 6, 7, 8, 9], axis=1, inplace=True)
 
 
 def write_to_csv(df_file, name):
