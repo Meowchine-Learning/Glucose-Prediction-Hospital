@@ -1,11 +1,11 @@
 import pandas as pd
-import numpy as np
+import json
 
 
 def main():
 
     df_map = pd.read_excel(
-        "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
+    "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
 
     encounters = df_map["ENCOUNTERS"]
     admit_dx = df_map["ADMIT_DX"]
@@ -128,6 +128,11 @@ def clean_admit(df):
     # "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads"
     # "liver biopsy VAD patient", "CABG", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "Heart tx", "NSTEMI/CABG", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "NSTEMI/wtg CABG"
 
+def clean_labs(df):
+    # The ratio of missing data is really small
+    # drop all the None value
+    return pd.DataFrame.dropna(df)
+
 
 def clean_or_proc_orders(df):
     # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
@@ -187,7 +192,7 @@ def clean_pin(df):
 
 
 def write_to_csv(df_file, name):
-    df_file.to_csv("data/"+name+".csv", header=True, index=False)
+    df_file.to_csv(name+".csv", index=None, header=True)
 
 
 def preprocess_data(df_file, name):
