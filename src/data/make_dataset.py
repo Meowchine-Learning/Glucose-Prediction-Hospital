@@ -5,18 +5,17 @@ import json
 def main():
 
     df_map = pd.read_excel(
-        "data/ACCESS 1853 Dataset.xlsx", sheet_name=None)
+        "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
 
     encounters = df_map["ENCOUNTERS"]
     admit_dx = df_map["ADMIT_DX"]
-    OR_orders = df_map["OR_PROC_ORDERS"]
+    or_proc_orders = df_map["OR_PROC_ORDERS"]
     orders_activity = df_map["ORDERS_ACTIVITY"]
     activity_qs = df_map["ACTIVITY_ORDER_QUESTIONS"]
     orders_nutrition = df_map["ORDERS_NUTRITION"]
     nutrition_qs = df_map["NUTRITION_ORDER_QUESTIONS"]
     labs = df_map["LABS"]
     med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
-    med_orders = df_map["MEDICATION_ORDERS"]
     pin = df_map["PIN"]
 
     clean_admit(admit_dx)
