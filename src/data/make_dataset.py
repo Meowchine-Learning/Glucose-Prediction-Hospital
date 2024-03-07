@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import re
 
 
 def main():
@@ -19,7 +20,7 @@ def main():
 
     clean_admit(admit_dx)
     df_map['LABS'] = clean_labs(labs)
-    clean_med_admin(med_admin)
+    df_map['MEDICATION_ADMINISTRATIONS'] = clean_med_admin(med_admin)
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
@@ -121,6 +122,24 @@ def clean_labs(df):
     return pd.DataFrame.dropna(df)
 
 
+def are_similar(name1, name2):
+    # Function to compare medication names if they are similar or not
+    # Rule: only number is different
+
+    if name1 == name2:
+        # directly True if they are same
+        return True
+    
+    else:
+        # Remove all numbers from both strings
+        noDigit1 = ''.join(filter(lambda x: not x.isdigit(), name1))
+        noDigit2 = ''.join(filter(lambda x: not x.isdigit(), name2))
+
+        # Compare the resulting strings
+        return noDigit1 == noDigit2
+
+
+
 def clean_med_admin(df):
 
     # drop ATC codes
@@ -141,6 +160,40 @@ def clean_med_admin(df):
     for i in range(len(list)):
         df.loc[list[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[list[i],
                                                                   "MEDICATION_ID"]]    # fill in missing routes
+    
+    # Check current medication names
+    # df.groupby('MEDICATION_NAME').count().to_csv(r"med_adm2.log", sep='\t', encoding='utf-8')
+    # df['MEDICATION_NAME'].drop_duplicates().sort_values().to_csv(r"med_adm.log", sep='\t', encoding='utf-8')
+
+    # create a map for new id
+    medication_id_mapping = {}
+    new_medication_id = 1
+    df['NEW_MEDICATION_ID'] = df['MEDICATION_ID']
+
+    for index, row in df.iterrows():
+        # loop each row
+        found_similar = False
+
+        for key, value in medication_id_mapping.items():
+            # looking for the similar in the map
+            if are_similar(row['MEDICATION_NAME'], key):
+                # change based on the map if similar
+                df.at[index, 'NEW_MEDICATION_ID'] = value
+                found_similar = True
+                break
+
+        if not found_similar:
+            # if can't find similar medication in the map, then save it to map as a new one
+            medication_id_mapping[row['MEDICATION_NAME']] = new_medication_id
+            df.at[index, 'NEW_MEDICATION_ID'] = new_medication_id
+            new_medication_id += 1
+    
+    
+    # df['NEW_MEDICATION_ID'].drop_duplicates().sort_values().to_csv(r"med_adm2.log", sep='\t', encoding='utf-8')
+    
+    return df
+    
+    
 
 
 def write_to_csv(df_file, name):
