@@ -144,31 +144,6 @@ def clean_admit(df):
     # "liver biopsy VAD patient", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "REMOVAL, ELECTRODE LEAD, ICD [1072379]"
 
 
-def clean_labs(df):
-    # The ratio of missing data is really small
-    # drop all the None value
-    return pd.DataFrame.dropna(df)
-
-
-
-def are_similar(name1, name2):
-    # Function to compare medication names if they are similar or not
-    # Rule: only number is different
-
-    if name1 == name2:
-        # directly True if they are same
-        return True
-    
-    else:
-        # Remove all numbers from both strings
-        noDigit1 = ''.join(filter(lambda x: not x.isdigit(), name1))
-        noDigit2 = ''.join(filter(lambda x: not x.isdigit(), name2))
-
-        # Compare the resulting strings
-        return noDigit1 == noDigit2
-
-
-
 def clean_or_proc_orders(df):
     # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
     df.drop(['PROC_DISPLAY_NAME', 'ANESTHESIA_START_TOD', 'ANESTHESIA_START_HRS_FROM_ADMIT', 'PROCEDURE_START_TOD', 'PROCEDURE_START_HRS_FROM_ADMIT', 'PROCEDURE_COMP_TOD', 'PROCEDURE_COMP_HRS_FROM_ADMIT', 'ANESTHESIA_STOP_TOD', 'ANESTHESIA_STOP_HRS_FROM_ADMIT'], axis=1, inplace=True)
@@ -202,12 +177,81 @@ def clean_labs(df):
 
     
 def clean_med_admin(df):
+    '''
+    H02AB02
+    DEXAMETHASONE IN NACL 0.9% 50 ML 6000637
 
-    # drop ATC codes
-    df.drop('MEDICATION_ATC', axis=1, inplace=True)
+    H02AB09
+    HYDROCORTISONE SODIUM SUCCINATE IN NACL 0.9% 100 ML (100 MG VIAL)(FLOOR) 6003152
+    HYDROCORTISONE SODIUM SUCCINATE IN NACL 0.9% 50 ML (100 MG VIAL)(FLOOR) 6003151
+    HYDROCORTISONE SODIUM SUCCINATE IN NACL 0.9% 50 ML BAG 6001118
 
-    df.drop('MEDICATION_NAME', axis=1, inplace=True)
-    df.drop('STRENGTH', axis=1, inplace=True)
+    A10AB05
+    INSULIN ASPART (NOVORAPID FLEXTOUCH) 100 UNIT/ML INJECTION PEN 4002908
+
+    A10AB04
+    INSULIN LISPRO (HUMALOG KWIKPEN) 100 UNIT/ML INJECTION PEN 4002884
+    INSULIN LISPRO (HUMALOG) IN NACL 0.9% 50 ML BAG (FLOOR) 6001625
+
+    A10AB01
+    ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN) 6004606
+    INSULIN REGULAR (HUMULIN R) 1 UNIT/ML (100 UNIT) IN NACL 0.9% 100 ML INFUSION BAG 6002910
+
+    H02AB04
+    ZZZMETHYLPREDNISOLONE SODIUM SUCCINATE IN D5W 50 ML BAG (125 MG/2 ML VIAL)(RN) 6003166
+    '''
+
+    # ATC code fixes
+    dexamethasone = df[df['MEDICATION_ID'] == 6000637].index
+    for i in range(len(dexamethasone)):
+        df.loc[dexamethasone[i], "MEDICATION_ATC"] = 'H02AB02'
+    
+    hydrocortisone = df[df['MEDICATION_ID'] == 6003152].index
+    for i in range(len(hydrocortisone)):
+        df.loc[hydrocortisone[i], "MEDICATION_ATC"] = 'H02AB09'
+    hydrocortisone = df[df['MEDICATION_ID'] == 6003151].index
+    for i in range(len(hydrocortisone)):
+        df.loc[hydrocortisone[i], "MEDICATION_ATC"] = 'H02AB09'
+    hydrocortisone = df[df['MEDICATION_ID'] == 6001118].index
+    for i in range(len(hydrocortisone)):
+        df.loc[hydrocortisone[i], "MEDICATION_ATC"] = 'H02AB09'
+    
+    insulin_aspart = df[df['MEDICATION_ID'] == 4002908].index
+    for i in range(len(insulin_aspart)):
+        df.loc[insulin_aspart[i], "MEDICATION_ATC"] = 'A10AB05'
+
+    insulin_lispro = df[df['MEDICATION_ID'] == 4002884].index
+    for i in range(len(insulin_lispro)):
+        df.loc[insulin_lispro[i], "MEDICATION_ATC"] = 'A10AB04'
+    insulin_lispro = df[df['MEDICATION_ID'] == 6001625].index
+    for i in range(len(insulin_lispro)):
+        df.loc[insulin_lispro[i], "MEDICATION_ATC"] = 'A10AB04'
+
+    insulin_regular = df[df['MEDICATION_ID'] == 6004606].index
+    for i in range(len(insulin_regular)):
+        df.loc[insulin_regular[i], "MEDICATION_ATC"] = 'A10AB01'
+    insulin_regular = df[df['MEDICATION_ID'] == 6002910].index
+    for i in range(len(insulin_regular)):
+        df.loc[insulin_regular[i], "MEDICATION_ATC"] = 'A10AB01'
+
+    methylprednisolone = df[df['MEDICATION_ID'] == 6003166].index
+    for i in range(len(methylprednisolone)):
+        df.loc[methylprednisolone[i], "MEDICATION_ATC"] = 'H02AB04'
+    
+    # infusion unit fixes
+    inf_unit_fixes = df[df['INFUSION_RATE_UNIT'] == 'mL/hr'].index
+    for i in range(len(inf_unit_fixes)):
+        # fix infusion rate == 0
+        if df.loc[inf_unit_fixes[i], "INFUSION_RATE"] == 0:
+            df.loc[inf_unit_fixes[i], "SIG"] = 0
+            df.loc[inf_unit_fixes[i], "DOSE_UNIT"] = 'mL/hr'
+        # fix empty values in SIG
+        elif pd.isnull(df.loc[inf_unit_fixes[i], "SIG"]):
+            df.loc[inf_unit_fixes[i], "SIG"] = df.loc[inf_unit_fixes[i], "INFUSION_RATE"]
+            df.loc[inf_unit_fixes[i], "DOSE_UNIT"] = 'mL/hr'
+        # normalize units
+        elif df.loc[inf_unit_fixes[i], "DOSE_UNIT"] not in ['g', 'mL', 'mg']:
+            df.loc[inf_unit_fixes[i], "DOSE_UNIT"] = 'mL/hr'
 
     # missing routes for meds
     med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
@@ -220,44 +264,17 @@ def clean_med_admin(df):
 
     # get rows where route is empty
     list = df[(df['ROUTE'].notnull()) == False].index
-
+    
+    # fill in empty values
     for i in range(len(list)):
-        df.loc[list[i], "CURRENT_ICD10_LIST"] = med_routes[df.loc[list[i],
-                                                                  "MEDICATION_ID"]]    # fill in missing routes
+        df.loc[list[i], "ROUTE"] = med_routes[df.loc[list[i], "MEDICATION_ID"]]
     
-    # Check current medication names
-    # df.groupby('MEDICATION_NAME').count().to_csv(r"med_adm2.log", sep='\t', encoding='utf-8')
-    # df['MEDICATION_NAME'].drop_duplicates().sort_values().to_csv(r"med_adm.log", sep='\t', encoding='utf-8')
-
-    # create a map for new id
-    medication_id_mapping = {}
-    new_medication_id = 1
-    df['NEW_MEDICATION_ID'] = df['MEDICATION_ID']
-
-    for index, row in df.iterrows():
-        # loop each row
-        found_similar = False
-
-        for key, value in medication_id_mapping.items():
-            # looking for the similar in the map
-            if are_similar(row['MEDICATION_NAME'], key):
-                # change based on the map if similar
-                df.at[index, 'NEW_MEDICATION_ID'] = value
-                found_similar = True
-                break
-
-        if not found_similar:
-            # if can't find similar medication in the map, then save it to map as a new one
-            medication_id_mapping[row['MEDICATION_NAME']] = new_medication_id
-            df.at[index, 'NEW_MEDICATION_ID'] = new_medication_id
-            new_medication_id += 1
-    
-    
-    # df['NEW_MEDICATION_ID'].drop_duplicates().sort_values().to_csv(r"med_adm2.log", sep='\t', encoding='utf-8')
-    
-    return df
-    
-    
+    # find/remove rows with empty values
+    empty_vals = df[(df['SIG'].notnull()) == False].index
+    df.drop(empty_vals, axis=0, inplace=True)
+        
+    # drop columns
+    df.drop(['MEDICATION_ID', 'MEDICATION_NAME', 'INFUSION_RATE', 'INFUSION_RATE_UNIT', 'STRENGTH'], axis=1, inplace=True)
 
 
 def clean_pin(df):
