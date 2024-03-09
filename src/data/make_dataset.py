@@ -1,5 +1,4 @@
 import pandas as pd
-import json
 
 
 def main():
@@ -43,19 +42,17 @@ def clean_admit(df):
 
     # missing codes
     codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3, I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0, I50.9", "CHF": "I50.0",
-             "AORTIC STENOSIS": "I35.0",   # 10 & 11
+             "AORTIC STENOSIS": "I35.0",
              "STEMI": "I21.3, R94.30", "NSTEMI exacerbation": "I21.4, R94.31", "NSTEMI": "I21.4, R94.31", "Acute MI": "I21.9",
-             "Chest pain and SOB": "R07.4, R06.0", "Chest Pain": "R07.4", "SOB": "R06.0",  # 2
+             "Chest pain and SOB": "R07.4, R06.0", "Chest Pain": "R07.4", "SOB": "R06.0",
              "Infected Endocarditis": "I33.0", "Endocarditis": "I38",
 
              "Triple Vessel Disease": "I25.19", "3-vessel CAD": "I25.19", "Left Main CAD": "I25.19", "Coronary Artery Disease": "I25.19", "multivessel disease": "I25.19",
              "Lung Transplant": "Z94.2", "Lung Transplant.": "Z94.2", "Lung Tx.": "Z94.2", "Transplantation": "Z94.9",
-             "mitral regurgitation": "I34.0",  # 6
-             "Postop Sternal Pain": "R07.3", "Sternal wound infection": "S21.11", "Sternum infection": "S21.11", "Sternal infection": "S21.11",  # 3, 9
-             "Wound Infection": "T14.1, T79.3", "post op infection": "T81.4", "Driveline Infection": "T82.79, Y83.1",   # 4
+             "mitral regurgitation": "I34.0",
+             "Postop Sternal Pain": "R07.3", "Sternal wound infection": "S21.11", "Sternum infection": "S21.11", "Sternal infection": "S21.11",
+             "Wound Infection": "T14.1, T79.3", "post op infection": "T81.4", "Driveline Infection": "T82.79, Y83.1",
 
-             # 12
-             # 12
              "Cardioverter defibrillator subcutaneous insertion (SICD)": "Z45.01",
              "Fluid overload": "E87.7",
              # "Abscess to left thigh": "L02.4",
@@ -71,20 +68,36 @@ def clean_admit(df):
              "NSTEMI/CABG": "Z95.1, I21.4, R94.31", "NSTEMI/wtg CABG": "Z95.1, I21.4, R94.31",
              "Aortic Dissection": "I71.0", "MINI-STERNOTOMY AORTIC VALVE REPLACEMENT": "Z95.4", "REOPERATION, WITH AORTIC VALVE REPAIR OR REPLACEMENT [1072465]": "Z95.4", "Valve repair post op complication": "Y83.8",
              "90% LM stenosis": "I35.0",
-             "Fluid overload VAD": "Y71.2",
+             "Fluid overload VAD": "Z95",
              "STERNAL WOUND": "S21.11", "Sternal wire infected": "T82.79",
-             "Pulmonary Fibrosis": "J84.9", "Pulmonary": "J44.9", "REPAIR, PARTIAL ANOMALOUS PULMONARY VENOUS RETURN": "Q24.8",  # check
+             "Pulmonary Fibrosis": "J84.9", "Pulmonary": "J44.9", "REPAIR, PARTIAL ANOMALOUS PULMONARY VENOUS RETURN": "Q24.8",
              "Gram Positive Sepsis": "A41.9",
-             "HEART Transplant": "Z94.9", "Heart tx": "Z94.9",
+             "HEART Transplant": "Z76.805", "Heart tx": "Z94.9",
              "Acute MI and decompensated heart failure": "I50.0, I21.9",
              "Double Lung Transplant": "Z94.2", "Preop lung tx": "Z76.803",
              "MVR": "Z95.4",
-             "Fungal infection": "B99",
+             "Fungal infection": "Z76.803",
              "TAVR work up": "Z95.4",
-             "low hgb": "D64.9",
+             "low hgb": "Z13.6",
              "Generator change": "Z45.00",
              "Pacemaker Problem": "Z45.00",
-             "Valvular heart failure": "I51.9",
+             "Valvular heart failure": "I50.9",
+             "Coronary angiography +/- PCI": "Z13.6", "Coronary angiography W&R Cath from LAC LA BICHE; - non isolated, heparin gtt, 15/15, independent, RA": "Z13.6",
+             "Coronary angiography/possible PCI; Patient in Westlock hospital W&R Cath; - non isolated, RA, SL, able to lay flat, 15/15, independent": "Z13.6",
+             "Coronary angiography W&R Cath from Northern Lights Hospital 7807916296; - 48 Iso due to SOB and no Cough covid negative, independent, able to lay flat with pain management, 15/15": "Z13.6",
+             "LEFT HEART CATHETERIZATION +/- PCI": "4A023N", "Right heart catheterization": "4A023N6",
+             "VAD Workup": "Z13.6", "AVR May 11 - +/- VAD. VAD workup": "I35.9", "VAD / bradycardia": "Z95",
+             "DEBRIDEMENT, STERNUM, WITH REPAIR USING PLATE": "T81.4",
+             "Lung disease": "J98.4",
+             "Pre op MVR and lead extraction": "I05.9",
+             "EDPD": "Z76.803",
+             "Abd pain": "R10.4",
+             "Enlarging hematoma to left chest wall": "T82.9",
+             "Pump thrombosis": "T82.9",
+             "Bacteremia/Mitral Vegetation": "I05.9",
+             "Penetrating Ulcer - Distal Aortic Arch": "I70.0",
+             "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
+             "liver biopsy VAD patient": "Z95", "VAD patient for generator change Monday": "Z45.00,Z95", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9", "VAD work- up": "Z13.6", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9"
              }
 
     # turn all to lowercase
@@ -111,35 +124,6 @@ def clean_admit(df):
 
     df.drop('ADMIT_DIAG_TEXT', axis=1, inplace=True)
     df.drop('DX_NAME', axis=1, inplace=True)
-
-    # QUESTION #2: Is SOB the same as SOBOE?    Not necesserily the same
-    # QUESTION #3: Is post op Postop Sternal Pain the same as sternal pain? probably
-    # QUESTION #4: Is Driveline Infection same as Infection associated with driveline of left ventricular assist device (LVAD)? probably
-    # QUESTION #5: Is Fluid overload VAD same as Fluid overload?    different
-    # QUESTION #6: Is Bacteremia/Mitral Vegetation same as Mitral regurgitation?    different
-    # QUESTION #7: what does MVR stand for (repair, replacement, regurgitation)?    send it here
-    # QUESTION #8: Is NSTEMI same as NSTEMI exacerbation?   probably the same
-    # QUESTION #9: Is sternum infection same as sternum wound infection?    yes
-    # QUESTION #10: "Heart Failure, Pericardial Effusion" same as composite of two?
-    # QUESTION #11: Is Valvular heart failure same as Valvular heart disease?   different
-    # QUESTION #12: Is "Cardioverter defibrillator subcutaneous insertion (SICD)" same code as Fitting or adjustment of automatic implantable cardioverter-defibrillator?   same
-
-    # "Coronary angiography +/- PCI", "Coronary angiography W&R Cath from LAC LA BICHE; - non isolated, heparin gtt, 15/15, independent, RA", "Coronary angiography/possible PCI; Patient in Westlock hospital W&R Cath; - non isolated, RA, SL, able to lay flat, 15/15, independent","Coronary angiography W&R Cath from Northern Lights Hospital 7807916296; - 48 Iso due to SOB and no Cough covid negative, independent, able to lay flat with pain management, 15/15",
-    # "LEFT HEART CATHETERIZATION +/- PCI": "", "Right heart catheterization":"",
-    # "VAD Workup", "AVR May 11 - +/- VAD. VAD workup":"", "VAD / bradycardia",  # 5
-    # "DEBRIDEMENT, STERNUM, WITH REPAIR USING PLATE",
-    # "Lung disease",
-    # "Pre op MVR and lead extraction":"Z95.4",   # 7
-    # "EDPD",
-    # "Abd pain",
-    # "Enlarging hematoma to left chest wall",
-    # "Pump thrombosis",
-    # "Bacteremia/Mitral Vegetation": "I34.0",
-    # "Penetrating Ulcer - Distal Aortic Arch",
-
-    # extra:
-    # "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads"
-    # "liver biopsy VAD patient", "VAD patient for generator change Monday", "REMOVAL, ELECTRODE LEAD, ICD [1072379]", "VAD work- up", "REMOVAL, ELECTRODE LEAD, ICD [1072379]"
 
 
 def clean_labs(df):
@@ -210,7 +194,7 @@ def clean_pin(df):
 
 
 def write_to_csv(df_file, name):
-    df_file.to_csv(name+".csv", index=None, header=True)
+    df_file.to_csv("data"+name+".csv", index=None, header=True)
 
 
 def preprocess_data(df_file, name):
