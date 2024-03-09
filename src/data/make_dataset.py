@@ -131,12 +131,6 @@ def clean_admit(df):
     df.drop('DX_NAME', axis=1, inplace=True)
 
 
-def clean_labs(df):
-    # The ratio of missing data is really small
-    # drop all the None value
-    return pd.DataFrame.dropna(df)
-
-
 def clean_or_proc_orders(df):
     # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
     df.drop(['PROC_DISPLAY_NAME', 'ANESTHESIA_START_TOD', 'ANESTHESIA_START_HRS_FROM_ADMIT', 'PROCEDURE_START_TOD', 'PROCEDURE_START_HRS_FROM_ADMIT',
