@@ -39,6 +39,11 @@ def clean_encounters(df):
 
 
 def clean_admit(df):
+    '''
+        I found rows with missing ICD10 codes, I filled those missing codes using the rows's Admit_diag_text cells (or Dx_name)
+        I match the codes from Admit_Dx
+        Detaisl are in the dict below
+    '''
 
     # missing codes
     codes = {"Heart Failure": "I50.9", "Heart Failure, Pericardial Effusion": "I31.3, I50.9", "Critical Aortic Stenosis with Heart Failure": "I35.0, I50.9", "CHF": "I50.0",
