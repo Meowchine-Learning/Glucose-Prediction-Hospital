@@ -12,6 +12,9 @@ __pycache__/
 # excel files
 *.xlsx
 
+# vscode
+*.vs
+
 # Distribution / packaging
 .Python
 build/

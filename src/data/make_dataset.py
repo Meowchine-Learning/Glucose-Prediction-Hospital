@@ -25,9 +25,33 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    for key in df_map.keys():
-        write_to_csv(df_map[key], key)
+    dfs = [encounters, admit_dx, or_proc_orders, orders_activity,
+              orders_nutrition, labs, med_admin, pin]
+   
+    # Merge all dataframes on STUDY_ID
+    df_combined = merge_tables(dfs)
+    # write combined dataframe to csv
+    write_to_csv(df_combined, "combined")
 
+    # for key in df_map.keys():
+    #     write_to_csv(df_map[key], key)
+
+def merge_tables(dfs):
+    #TODO: need to concatenate any sequences before merging, otherwise duplicate column values are multiplied -- cannot merge two sequences
+    # assert no rows are missing STUDY_ID
+    for df in dfs:
+        assert df['STUDY_ID'].isnull().sum() == 0, "Missing STUDY_ID"
+
+    # merge all dataframes on STUDY_ID
+    df_combined = dfs[0]
+    for i in range(1, len(dfs)):
+        df_combined = pd.merge(df_combined, dfs[i], on='STUDY_ID', how='outer')
+    return df_combined
+
+def assign_new_study_id(df):
+    # Be cautious of consistent mapping order
+    df['STUDY_ID'] = df.groupby(['STUDY_ID', 'ENCOUNTER_NUM']).ngroup()
+    return df
 
 def clean_encounters(df):
     # drop A1C columns
