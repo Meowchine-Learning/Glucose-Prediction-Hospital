@@ -81,8 +81,20 @@ def train(model, train_dataset, valid_dataset, device):
     
 
 def TCN(device):
-    
-    model = TemporalConvNet(num_inputs, num_channels = 1)
+    # time series and non-time series 
+    # ( batch_size, non_time_feature_num)
+    # ( batch_size, time_length, time_feature_num )
+    # concat: (batch_size, seq_length, 12)
+
+    combined_data = torch.cat((non_time_series_data, time_series_data), dim=2)
+
+    num_channels = [64, 128, 256]  # Example numbers of channels for each block
+    num_non_time_series_features = 10
+    num_time_series_features = 2
+    total_features = num_non_time_series_features+num_time_series_features
+    seq_length = 100  # Example sequence length
+
+    model = tcn.TemporalConvNet(num_inputs = total_features, num_channels = num_channels)
     train_dataset, valid_dataset = load_dataset()
 
     results = train(model, train_dataset, valid_dataset, device)
