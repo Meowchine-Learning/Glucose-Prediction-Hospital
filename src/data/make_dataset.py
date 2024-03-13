@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 def main():
@@ -15,17 +16,44 @@ def main():
     med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
     pin = df_map["PIN"]
 
-    clean_encounters(encounters)
-    clean_admit(admit_dx)
-    clean_or_proc_orders(or_proc_orders)
-    clean_orders_activiy(orders_activity)
-    clean_orders_nutrition(orders_nutrition)
-    clean_labs(labs)
-    clean_med_admin(med_admin)
-    clean_pin(pin)
+    # clean_encounters(encounters)
+    # clean_admit(admit_dx)
+    # clean_or_proc_orders(or_proc_orders)
+    # clean_orders_activiy(orders_activity)
+    # clean_orders_nutrition(orders_nutrition)
+    # clean_labs(labs)
+    # clean_med_admin(med_admin)
+    # clean_pin(pin)
+
+    encoding("ENCOUNTERS",encounters, "SEX")
+    encoding("OR_PROC_ORDERS",or_proc_orders, "OR_PROC_ID")
+
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
+
+
+def encoding(name,df,column):
+
+    # Perform one-hot encoding
+    categories = df[column].unique()
+    np_column = df[column].values.flatten()  # numpy array 
+    categories = np.unique(np_column)  # categories 
+    category_index = {category: index for index, category in enumerate(categories)}
+    one_hot_encoded = []
+
+    for i in range(len(np_column)):
+        data = np_column[i]
+        one_hot = [0] * len(categories) # [0,0]
+        index = np.where(data==categories)[0][0]
+        one_hot[index] = 1
+        one_hot_encoded.append(one_hot)
+    
+    # Replace the values in the "SEX" column with one-hot encoded values
+    df[column] = one_hot_encoded
+
+    # Write DataFrame to CSV
+    write_to_csv(df, name)
 
 
 def clean_encounters(df):
