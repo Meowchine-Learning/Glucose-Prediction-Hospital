@@ -16,50 +16,22 @@ def main():
     med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
     pin = df_map["PIN"]
 
-    # clean_encounters(encounters)
-    # clean_admit(admit_dx)
-    # clean_or_proc_orders(or_proc_orders)
-    # clean_orders_activiy(orders_activity)
-    # clean_orders_nutrition(orders_nutrition)
-    # clean_labs(labs)
-    # clean_med_admin(med_admin)
-    # clean_pin(pin)
+    clean_encounters(encounters)
+    clean_admit(admit_dx)
+    clean_or_proc_orders(or_proc_orders)
+    clean_orders_activiy(orders_activity)
+    clean_orders_nutrition(orders_nutrition)
+    clean_labs(labs)
+    clean_med_admin(med_admin)
+    clean_pin(pin)
 
     encoding("ENCOUNTERS",encounters, "SEX")
     encoding("OR_PROC_ORDERS",or_proc_orders, "OR_PROC_ID")
+    encoding("ADMIT_DX", admit_dx, "CURRENT_ICD10_LIST" )
 
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
-
-def encoding(name,df,column):
-
-    # Perform one-hot encoding
-    # encounters_encoded = pd.get_dummies(df["SEX"])
-    print("column", column)
-    categories = df["SEX"].unique()
-    # print(type(df))
-    # print(categories)
-    np_column = df["SEX"].values.flatten()  # numpy array 
-    categories = np.unique(np_column)  # categories 
-    category_index = {category: index for index, category in enumerate(categories)}
-
-    for i in range(len(np_column)):
-        data = np_column[i]
-        one_hot = [0] * len(categories) # [0,0]
-        print(data)
-        index = np.where(data==categories)[0][0]
-        print(index)
-        one_hot[index] = 1
-        df.at[i,column] = one_hot
-        print(type(one_hot))
-    print(df)
-
-
-
-
-
-    write_to_csv(df,name)
 
 
 def encoding(name,df,column):
