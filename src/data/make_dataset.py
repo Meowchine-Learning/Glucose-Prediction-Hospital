@@ -25,36 +25,47 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    encoding("ENCOUNTERS",encounters, "SEX")
-    encoding("OR_PROC_ORDERS",or_proc_orders, "OR_PROC_ID")
-    encoding("ADMIT_DX", admit_dx, "CURRENT_ICD10_LIST" )
+    encoding("ENCOUNTERS",encounters, ["SEX"])
+    encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
+    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
+    encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
+    encoding("LABS", labs, ["COMPONENT_ID"])
+    encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
 
 
-def encoding(name,df,column):
+def encoding(name,df,column_list):
+    def preprocess_column(column):
+        # Convert numerical values to strings
+        column = column.astype(str)
+        return column
+    if column_list[0]== "CURRENT_ICD10_LIST":
+        # Example usage
+        df["CURRENT_ICD10_LIST"] = preprocess_column(df["CURRENT_ICD10_LIST"])
 
-    # Perform one-hot encoding
-    categories = df[column].unique()
-    np_column = df[column].values.flatten()  # numpy array 
-    categories = np.unique(np_column)  # categories 
-    category_index = {category: index for index, category in enumerate(categories)}
-    one_hot_encoded = []
+    for column in column_list:
+        # Perform one-hot encoding
+        categories = df[column].unique()
+        np_column = df[column].values.flatten()  # numpy array 
+        categories = np.unique(np_column)  # categories 
+        category_index = {category: index for index, category in enumerate(categories)}
+        one_hot_encoded = []
 
-    for i in range(len(np_column)):
-        data = np_column[i]
-        one_hot = [0] * len(categories) # [0,0]
-        index = np.where(data==categories)[0][0]
-        one_hot[index] = 1
-        one_hot_encoded.append(one_hot)
-    
-    # Replace the values in the "SEX" column with one-hot encoded values
-    df[column] = one_hot_encoded
+        for i in range(len(np_column)):
+            data = np_column[i]
+            one_hot = [0] * len(categories) # [0,0]
+            index = np.where(data==categories)[0][0]
+            one_hot[index] = 1
+            one_hot_encoded.append(one_hot)
+        
+        # Replace the values in the "SEX" column with one-hot encoded values
+        df[column] = one_hot_encoded
 
-    # Write DataFrame to CSV
-    write_to_csv(df, name)
+        # Write DataFrame to CSV
+        write_to_csv(df, name)
 
 
 def clean_encounters(df):
