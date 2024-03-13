@@ -133,7 +133,7 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
         prod_ids[procs[OR_PROC_ID[idx]]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
-        DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
+        DATA[ID]["OR_PROC_ID"].append(prod_ids)
 
     print("√ 04_OR_PROC_ORDERS")
     return DATA
@@ -185,7 +185,7 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
         prod_ids = np.zeros(len(procs))
         prod_ids[procs[PROC_ID[idx]]] = 1
 
-        DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID[idx])
+        DATA[ID]["ORDERS_NUTRITION"].append(prod_ids)
         DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(PROC_START_HRS_FROM_ADMIT[idx])
         DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT[idx])
 
@@ -228,7 +228,7 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
         lab_ids[labs[COMPONENT_ID[idx]]] = 1
 
         DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(RESULT_HRS_FROM_ADMIT[idx])
-        DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID[idx])
+        DATA[ID]["LAB_COMPONENT_ID"].append(lab_ids)
         DATA[ID]["LAB_ORD_VALUE"].append(ORD_VALUE[idx])
     print("√ 09_LABS")
     return DATA

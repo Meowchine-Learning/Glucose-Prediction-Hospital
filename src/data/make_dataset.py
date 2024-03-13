@@ -133,8 +133,8 @@ def clean_admit(df):
 
 def clean_or_proc_orders(df):
     # drop all columns except STUDY_ID, ENCOUNTER_NUM, and OR_PROC_ID
-    df.drop(['PROC_DISPLAY_NAME', 'ANESTHESIA_START_TOD', 'ANESTHESIA_START_HRS_FROM_ADMIT', 'PROCEDURE_START_TOD', 'PROCEDURE_START_HRS_FROM_ADMIT',
-            'PROCEDURE_COMP_TOD', 'PROCEDURE_COMP_HRS_FROM_ADMIT', 'ANESTHESIA_STOP_TOD', 'ANESTHESIA_STOP_HRS_FROM_ADMIT'], axis=1, inplace=True)
+    df.drop(['PROC_DISPLAY_NAME', 'ANESTHESIA_START_TOD', 'ANESTHESIA_START_HRS_FROM_ADMIT', 
+             'ANESTHESIA_STOP_TOD', 'ANESTHESIA_STOP_HRS_FROM_ADMIT'], axis=1, inplace=True)
 
 
 def clean_orders_activiy(df):
@@ -267,7 +267,7 @@ def clean_med_admin(df):
 
 def clean_pin(df):
     # drop everything but STUDY_ID, DISP_DAYS_PRIOR, SUPP_DRUG_ATC_CODE
-    df.drop(['ENCOUNTER_NUM', 'DRUG_DIN', 'BRAND_NAME', 'DSPN_AMT_QTY', 'DSPN_AMT_UNT_MSR_CD',
+    df.drop(['DRUG_DIN', 'BRAND_NAME', 'DSPN_AMT_QTY', 'DSPN_AMT_UNT_MSR_CD',
             'DSPN_DAY_SUPPLY_QTY', 'DSPN_DAY_SUPPLY_UNT_MSR_CD'], axis=1, inplace=True)
 
 
