@@ -1,13 +1,10 @@
 import csv
 import json
-from gensim.models.doc2vec import TaggedDocument, Doc2Vec
-import pandas as pd 
-import numpy as np 
-from sklearn.preprocessing import OneHotEncoder
+import numpy as np
 
 
 def _dataInput_csv(filePath: str) -> list:
-    with open(filePath, mode='r', newline='') as file:
+    with open(filePath, mode='r', encoding='utf-8') as file:
         reader = csv.reader(file)
         next(reader, None)
         IN = list(reader)
@@ -33,7 +30,7 @@ def _initiateIDCase(DATA, ID):
     # TABLE 02
     DATA[ID]["WEIGHT_KG"] = None
     DATA[ID]["HEIGHT_CM"] = None
-    DATA[ID]["ACGE"] = None
+    DATA[ID]["AGE"] = None
     DATA[ID]["SEX"] = None
 
     # TABLE 04
@@ -73,18 +70,17 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
     HEIGHT_CM = _getTableColumn(data_01_ENCOUNTERS, 6)
     AGE = _getTableColumn(data_01_ENCOUNTERS, 7)
     SEX_str = _getTableColumn(data_01_ENCOUNTERS, 8)
-    SEX = np.array([0 if case == "MALE" else 1 for case in SEX_str])
+    SEX = [0 if case == "MALE" else 1 for case in SEX_str]
     del SEX_str
 
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         _initiateIDCase(DATA, ID)
-        DATA[ID]["HOSP_DISCHRG_HRS_FROM_ADMIT"] = HOSP_DISCHRG_HRS_FROM_ADMIT
-        DATA[ID]["WEIGHT_KG"] = WEIGHT_KG
-        DATA[ID]["HEIGHT_CM"] = HEIGHT_CM
-        DATA[ID]["AGE"] = AGE
-        DATA[ID]["SEX"] = SEX
-
+        DATA[ID]["HOSP_DISCHRG_HRS_FROM_ADMIT"] = HOSP_DISCHRG_HRS_FROM_ADMIT[idx]
+        DATA[ID]["WEIGHT_KG"] = WEIGHT_KG[idx]
+        DATA[ID]["HEIGHT_CM"] = HEIGHT_CM[idx]
+        DATA[ID]["AGE"] = AGE[idx]
+        DATA[ID]["SEX"] = SEX[idx]
     print("√ 01_ENCOUNTERS")
     return DATA
 
@@ -103,7 +99,7 @@ def preprocess_02_ADMIT_DX(DATA, filePath_02_ADMIT_DX) -> dict:
             if not disease in diseaseIDs:
                 diseaseIDs[disease] = num
                 num += 1
-    
+
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         diseases = np.zeros(len(diseaseIDs))
@@ -157,9 +153,9 @@ def preprocess_05_ORDERS_ACTIVITY(DATA, filePath_05_ORDERS_ACTIVITY) -> dict:
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["ORDERS_ACTIVITY"].append(PROC_ID)
-        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(PROC_START_HRS_FROM_ADMIT)
-        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT)
+        DATA[ID]["ORDERS_ACTIVITY"].append(PROC_ID[idx])
+        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(PROC_START_HRS_FROM_ADMIT[idx])
+        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT[idx])
 
     print("√ 05_ORDERS_ACTIVITY")
     return DATA
@@ -185,13 +181,13 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
-        
+
         prod_ids = np.zeros(len(procs))
         prod_ids[procs[PROC_ID[idx]]] = 1
 
-        DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID)
-        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(PROC_START_HRS_FROM_ADMIT)
-        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT)
+        DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID[idx])
+        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(PROC_START_HRS_FROM_ADMIT[idx])
+        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT[idx])
 
     print("√ 06_ORDERS_NUTRITION")
     return DATA
@@ -231,16 +227,15 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
         lab_ids = np.zeros(len(labs))
         lab_ids[labs[COMPONENT_ID[idx]]] = 1
 
-        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(RESULT_HRS_FROM_ADMIT)
-        DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID)
-        DATA[ID]["LAB_ORD_VALUE"].append(ORD_VALUE)
-
+        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(RESULT_HRS_FROM_ADMIT[idx])
+        DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID[idx])
+        DATA[ID]["LAB_ORD_VALUE"].append(ORD_VALUE[idx])
     print("√ 09_LABS")
-
     return DATA
 
 
-def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN) -> dict:
+def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS,
+                                                        filePath_12_PIN) -> dict:
     data_10_MEDICATION_ADMINISTRATIONS = _dataInput_csv(filePath_10_MEDICATION_ADMINISTRATIONS)
     data_12_PIN = _dataInput_csv(filePath_12_PIN)
 
@@ -266,18 +261,18 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["MEDICATION_ATC"].append(MEDICATION_ATC)                  # todo One-hot encoding, same drugMenu
-        DATA[ID]["MEDICATION_SIG"].append(SIG)
-        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(TAKEN_HRS_FROM_ADMIT)
-        DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION + DOSE_UNIT + ROUTE))
+        DATA[ID]["MEDICATION_ATC"].append(MEDICATION_ATC[idx])  # todo One-hot encoding, same drugMenu
+        DATA[ID]["MEDICATION_SIG"].append(SIG[idx])
+        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(TAKEN_HRS_FROM_ADMIT[idx])
+        DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + DOSE_UNIT[idx] + ROUTE[idx]))
 
     for idx, value in enumerate(STUDY_ID_12):
-        ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])      # todo reclean
+        ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])  # todo reclean
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["PRIOR_MEDICATION_ATC_CODE"].append(MEDICATION_ATC)        # todo One-hot encoding, same drugMenu
-        DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in DISP_DAYS_PRIOR]     # --> Map 2 yr range to 0~10;
+        DATA[ID]["PRIOR_MEDICATION_ATC_CODE"].append(SUPP_DRUG_ATC_CODE[idx])  # todo One-hot encoding, same drugMenu
+        DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in DISP_DAYS_PRIOR[idx]]  # --> Map 2 yr range to 0~10;
         DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(DISP_DAYS_PRIOR_NORM)
 
     print("√ 10_MEDICATION_ADMINISTRATIONS_and_12_PIN")
@@ -287,7 +282,6 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
 def preprocess_11_MEDICATION_ORDERS(DATA, filePath_11_MEDICATION_ORDERS) -> dict:
     # todo
     return DATA
-
 
 
 def preprocessData() -> dict:
