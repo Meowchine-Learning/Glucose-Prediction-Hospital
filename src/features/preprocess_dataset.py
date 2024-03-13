@@ -1,6 +1,7 @@
 import csv
 import json
 import numpy as np
+import nltk
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 
 
@@ -52,12 +53,14 @@ def _initiateIDCase(DATA, ID):
 
     # TABLE 10
     DATA[ID]["MEDICATION_ATC"] = []
+    DATA[ID]["MEDICATION_ATC_ENCODED"] = []
     DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"] = []
     DATA[ID]["MEDICATION_SIG"] = []
     DATA[ID]["MEDICATION_ACTIONS"] = []
+    DATA[ID]["MEDICATION_ACTIONS_ENCODED"] = []
 
     # TABLE 12
-    DATA[ID]["PRIOR_MEDICATION_ATC_CODE"] = []
+    DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = []
     DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"] = []
 
 
@@ -237,7 +240,7 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
     return DATA
 
 
-def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN) -> dict:
+def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN, toReload_ACTIONS_d2vModel=True, toReload_DRUGS_d2vModel=True) -> dict:
     data_10_MEDICATION_ADMINISTRATIONS = _dataInput_csv(filePath_10_MEDICATION_ADMINISTRATIONS)
     data_12_PIN = _dataInput_csv(filePath_12_PIN)
 
@@ -255,35 +258,75 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
     DISP_DAYS_PRIOR = _getTableColumn(data_12_PIN, 2)
     SUPP_DRUG_ATC_CODE = _getTableColumn(data_12_PIN, 3)
 
+    # Pre-merging:
     for idx, value in enumerate(STUDY_ID_10):
         ID = str(STUDY_ID_10[idx] + ENCOUNTER_NUM_10[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["MEDICATION_ATC"].append(MEDICATION_ATC[idx])  # todo One-hot encoding, same drugMenu
+        DATA[ID]["MEDICATION_ATC"].append(str(MEDICATION_ATC[idx]))
         DATA[ID]["MEDICATION_SIG"].append(float(SIG[idx]))
         DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(float(TAKEN_HRS_FROM_ADMIT[idx]))
         DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + DOSE_UNIT[idx] + ROUTE[idx]))
 
     for idx, value in enumerate(STUDY_ID_12):
-        ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])  # todo reclean
+        ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["PRIOR_MEDICATION_ATC_CODE"].append(SUPP_DRUG_ATC_CODE[idx])  # todo One-hot encoding, same drugMenu
-        DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in DISP_DAYS_PRIOR[idx]]  # --> Map 2 yr range to 0~10;
-        DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(DISP_DAYS_PRIOR_NORM)
+        DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"].append(str(SUPP_DRUG_ATC_CODE[idx]))
+        DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in
+                                DISP_DAYS_PRIOR[idx]]  # --> Map 2 yr range to 0~10;
+        DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(list(map(int, DISP_DAYS_PRIOR_NORM)))
 
 
-    drugMenu = list(set(MEDICATION_ATC + SUPP_DRUG_ATC_CODE))
+    # Create Encoders
+    if toReload_ACTIONS_d2vModel:
+        ACTIONS_d2vModel = Doc2Vec.load("encoders/ACTIONS_d2vModel.pkl")
+    else:
+        ACTIONS_Documents = []
+        for ID in DATA.keys():
+            ACTIONS_Documents.append(nltk.word_tokenize(' '.join(DATA[ID]['MEDICATION_ACTIONS']).strip()))
+        ACTIONS_TDocuments = [TaggedDocument(words=[str(doc)], tags=[idx]) for idx, doc in enumerate(ACTIONS_Documents)]
+        ACTIONS_d2vModel = Doc2Vec(documents=ACTIONS_TDocuments,
+                                   vector_size=5,
+                                   window=6,
+                                   min_count=1,
+                                   workers=10)
+        ACTIONS_d2vModel.save("encoders/ACTIONS_d2vModel.pkl")
 
+    if toReload_DRUGS_d2vModel:
+        DRUGS_d2vModel = Doc2Vec.load("encoders/DRUGS_d2vModel.pkl")
+    else:
+        DRUGS_Documents = []
+        for ID in DATA.keys():
+            DRUGS_Documents.append(DATA[ID]['MEDICATION_ATC'])
+            DRUGS_Documents.append(DATA[ID]['PRIOR_MEDICATION_ATC_ENCODED'])
+
+        DRUGS_TDocuments = [TaggedDocument(words=[str(doc)], tags=[idx]) for idx, doc in enumerate(DRUGS_Documents)]
+        DRUGS_d2vModel = Doc2Vec(documents=DRUGS_TDocuments,
+                                 vector_size=5,
+                                 window=6,
+                                 min_count=1,
+                                 workers=10)
+        DRUGS_d2vModel.save("encoders/DRUGS_d2vModel.pkl")
+
+    # Encoding Processes:
+    for idx, value in enumerate(STUDY_ID_10):
+        ID = str(STUDY_ID_10[idx] + ENCOUNTER_NUM_10[idx])
+        DATA[ID]["MEDICATION_ATC_ENCODED"] = DRUGS_d2vModel.infer_vector(list(map(str, DATA[ID]["MEDICATION_ATC"]))).tolist()
+        DATA[ID]["MEDICATION_ACTIONS_ENCODED"] = ACTIONS_d2vModel.infer_vector(nltk.word_tokenize(' '.join(DATA[ID]['MEDICATION_ACTIONS']).strip())).tolist()
     print("√ 10_MEDICATION_ADMINISTRATIONS")
+
+    for idx, value in enumerate(STUDY_ID_12):
+        ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])
+        DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = DRUGS_d2vModel.infer_vector(list(map(str, DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"]))).tolist()
     print("√ 12_PIN")
+
     return DATA
 
 
 def preprocess_11_MEDICATION_ORDERS(DATA, filePath_11_MEDICATION_ORDERS) -> dict:
-    # todo
     return DATA
 
 
@@ -322,12 +365,12 @@ def preprocessData() -> dict:
     # 09_LABS
     DATA = preprocess_09_LABS(DATA, filePath_09_LABS)
     # 10_MEDICATION_ADMINISTRATIONS & 12_PIN
-    DATA = preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN)
+    DATA = preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS,
+                                                               filePath_12_PIN)
     # 11_MEDICATION_ORDERS              # todo: almost same to table 10, currently ignored;
     DATA = preprocess_11_MEDICATION_ORDERS(DATA, filePath_11_MEDICATION_ORDERS)
 
     return DATA
-
 
 
 if __name__ == '__main__':
@@ -341,13 +384,13 @@ if __name__ == '__main__':
     #           WEIGHT_KG: float,
     #           HEIGHT_CM: float,
     #           AGE: int,
-    #           SEX: int,                                   * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=2 * onehot check
-    #           DISEASES: [                                 * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=150 * onehot check
+    #           SEX: int,
+    #           DISEASES: [                                 * ENCODING: ONE-HOT APPLIED, TOTAL_VARIETIES=150 *
     #               diseaseID_1: int (idx),
     #               diseaseID_2: int (idx),
     #               ...
     #           ],
-    #           OR_PROC_ID: [                               * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=108 *
+    #           OR_PROC_ID: [                               * ENCODING: ONE-HOT, TOTAL_VARIETIES=108 *
     #               OR_PROC_ID_01,
     #               OR_PROC_ID_02,
     #               ...
@@ -367,7 +410,7 @@ if __name__ == '__main__':
     #               activity_02_stopTime: time,
     #               ...
     #           ],
-    #           ORDERS_NUTRITION: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=15 * onehot check
+    #           ORDERS_NUTRITION: [                         * ENCODING: ONE-HOT APPLIED, TOTAL_VARIETIES=15 *
     #               nutrition_01: int,
     #               nutrition_02: int,
     #               ...
@@ -387,7 +430,7 @@ if __name__ == '__main__':
     #               LAB_RESULT_TIME_2: time,
     #               ...
     #           ],
-    #           LAB_COMPONENT_ID: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=16 * onehot check
+    #           LAB_COMPONENT_ID: [                         * ENCODING: ONE-HOT APPLIED, TOTAL_VARIETIES=16 *
     #               LAB_COMPONENT_TIME_1: time,
     #               LAB_COMPONENT_TIME_2: time,
     #               ...
@@ -397,10 +440,14 @@ if __name__ == '__main__':
     #               LAB_ORD_VALUE_TIME_2: float，
     #               ...
     #           ],
-    #           MEDICATION_ATC: [                           * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92*
+    #           MEDICATION_ATC: [                           * ENCODING: ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92*
     #               MEDICATION_ATC_1: str;
     #               MEDICATION_ATC_2: str;
     #               ...
+    #           ],
+    #           MEDICATION_ATC_ENCODED: [                   * (NEW) ENCODING: Doc2Vec APPLIED -> `DRUGS_d2vModel.pkl` *
+    #               <Doc2Vec_ENCODED_VECTOR, Size=5>
+    #               <Same as MEDICATION_ATC (kept for time checking)>
     #           ],
     #           MEDICATION_TAKEN_HRS_FROM_ADMIT: [          <TREATMENT_TIME: Relative time>
     #               MEDICATION_TAKEN_TIME_1: time;
@@ -412,18 +459,20 @@ if __name__ == '__main__':
     #               MEDICATION_SIG_2: float;
     #               ...
     #           ],
-    #           MEDICATION_ACTIONS: [                       * ENCODING: APPLY Doc2Vec *
+    #           MEDICATION_ACTIONS: [                       * ENCODING: Doc2Vec *
     #               MEDICATION_ACTION_1: str;
     #               MEDICATION_ACTION_1: str;
     #               ...
     #           ],
-    #           PRIOR_MEDICATION_ATC_CODE: [                 * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92?*
-    #               PRIOR_DRUG_TAKEN_ATC_CODE_1: str;
-    #               PRIOR_DRUG_TAKEN_ATC_CODE_2: str;
-    #               ...
+    #           MEDICATION_ACTIONS_ENCODED: [               * ENCODING: Doc2Vec APPLIED -> `ACTIONS_d2vModel.pkl` *
+    #               <Doc2Vec_ENCODED_VECTOR, Size=5>
+    #               <Same as MEDICATION_ACTIONS (kept for time checking)>
+    #           ],
+    #           PRIOR_MEDICATION_ATC_ENCODED: [             * ENCODING: Doc2Vec APPLIED -> `DRUGS_d2vModel.pkl` *
+    #              <Doc2Vec_ENCODED_VECTOR, Size=5>
     #           ],
     #           PRIOR_MEDICATION_DISP_DAYS_NORM: [          <TREATMENT_TIME_NORMED: As personal features, like height>
-    #               PRIOR_MEDICATION_DISP_DAYS_NORM_1: int;     --> [0, 10]
+    #               PRIOR_MEDICATION_DISP_DAYS_NORM_1: int;     --> [0, 10], indicates how far the time prior
     #               PRIOR_MEDICATION_DISP_DAYS_NORM_2: int;
     #               ...
     #           ],
