@@ -107,7 +107,7 @@ def preprocess_02_ADMIT_DX(DATA, filePath_02_ADMIT_DX) -> dict:
             diseases[diseaseIDs[disease]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
-        DATA[ID]["DISEASES"] = diseases
+        DATA[ID]["DISEASES"] = list(diseases)
 
     print("√ 02_ADMIT_DX")
     return DATA
@@ -234,8 +234,7 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
     return DATA
 
 
-def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS,
-                                                        filePath_12_PIN) -> dict:
+def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN) -> dict:
     data_10_MEDICATION_ADMINISTRATIONS = _dataInput_csv(filePath_10_MEDICATION_ADMINISTRATIONS)
     data_12_PIN = _dataInput_csv(filePath_12_PIN)
 
@@ -440,3 +439,4 @@ if __name__ == '__main__':
 
     """ Data Cleaning and Preprocessing """
     dataPreprocessed = preprocessData()
+    _dataOutput_json(dataPreprocessed)
