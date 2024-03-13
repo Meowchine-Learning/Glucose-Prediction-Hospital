@@ -1,6 +1,9 @@
 import csv
 import json
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+import pandas as pd 
+import numpy as np 
+from sklearn.preprocessing import OneHotEncoder
 
 
 def _dataInput_csv(filePath: str) -> list:
@@ -33,11 +36,8 @@ def _initiateIDCase(DATA, ID):
     DATA[ID]["ACGE"] = None
     DATA[ID]["SEX"] = None
 
-    # TABLE 03
-    DATA[ID]["DISEASES"] = []
-
     # TABLE 04
-    DATA[ID]["OR_PRO_ID"] = []
+    DATA[ID]["OR_PROC_ID"] = []
 
     # TABLE 05 & 06
     DATA[ID]["ORDERS_ACTIVITY"] = []
@@ -49,8 +49,8 @@ def _initiateIDCase(DATA, ID):
 
     # TABLE 09
     DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"] = []
-    DATA[ID]["COMPONENT_ID"] = []
-    DATA[ID]["ORD_VALUE"] = []
+    DATA[ID]["LAB_COMPONENT_ID"] = []
+    DATA[ID]["LAB_ORD_VALUE"] = []
 
     # TABLE 10
     DATA[ID]["MEDICATION_ATC"] = []
@@ -73,7 +73,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
     HEIGHT_CM = _getTableColumn(data_01_ENCOUNTERS, 6)
     AGE = _getTableColumn(data_01_ENCOUNTERS, 7)
     SEX_str = _getTableColumn(data_01_ENCOUNTERS, 8)
-    SEX = [0 if case == "MALE" else 1 for case in SEX_str]
+    SEX = np.array([0 if case == "MALE" else 1 for case in SEX_str])
     del SEX_str
 
     for idx, value in enumerate(STUDY_ID):
@@ -87,21 +87,26 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
     return DATA
 
 
-def preprocess_02_ADMIT_DX_and_03_DX_LOOKUP(DATA, filePath_02_ADMIT_DX, filePath_03_DX_LOOKUP) -> dict:
+def preprocess_02_ADMIT_DX(DATA, filePath_02_ADMIT_DX) -> dict:
     data_02_ADMIT_DX = _dataInput_csv(filePath_02_ADMIT_DX)
-    data_03_DX_LOOKUP = _dataInput_csv(filePath_03_DX_LOOKUP)
-
-    diseaseIDs = {}
-    for idx, value in enumerate(_getTableColumn(data_03_DX_LOOKUP, 0)):
-        diseaseIDs[value] = idx
 
     STUDY_ID = _getTableColumn(data_02_ADMIT_DX, 0)
     ENCOUNTER_NUM = _getTableColumn(data_02_ADMIT_DX, 1)
     CURRENT_ICD10_LIST = _getTableColumn(data_02_ADMIT_DX, 3)
 
+    diseaseIDs = dict()
+    num = 0
+    for idx, value in enumerate(STUDY_ID):
+        for disease in CURRENT_ICD10_LIST[idx].split(", "):
+            if not disease in diseaseIDs:
+                diseaseIDs[disease] = num
+                num += 1
+    
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
-        diseases = [diseaseIDs[disease] for disease in CURRENT_ICD10_LIST[idx].split(", ")]
+        diseases = np.zeros(len(diseaseIDs))
+        for disease in CURRENT_ICD10_LIST[idx].split(", "):
+            diseases[diseaseIDs[disease]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
         DATA[ID]["DISEASES"] = diseases
@@ -115,8 +120,18 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
     ENCOUNTER_NUM = _getTableColumn(data_04_OR_PROC_ORDERS, 1)
     OR_PROC_ID = _getTableColumn(data_04_OR_PROC_ORDERS, 2)
 
+    procs = dict()
+    num = 0
+    for idx, value in enumerate(STUDY_ID):
+        for proc in OR_PROC_ID[idx].split(", "):
+            if not proc in procs:
+                procs[proc] = num
+                num += 1
+
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
+        prod_ids = np.zeros(len(procs))
+        prod_ids[procs[OR_PROC_ID[idx]]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
         DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
@@ -266,7 +281,7 @@ def preprocessData() -> dict:
     # 01_ENCOUNTERS
     DATA = preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS)
     # 02_ADMIT_DX & 03_DX_LOOKUP
-    DATA = preprocess_02_ADMIT_DX_and_03_DX_LOOKUP(DATA, filePath_02_ADMIT_DX, filePath_03_DX_LOOKUP)
+    DATA = preprocess_02_ADMIT_DX(DATA, filePath_02_ADMIT_DX)
     # 04_OR_PROC_ORDERS
     DATA = preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS)
     # 05_ORDERS_ACTIVITY
@@ -301,8 +316,8 @@ if __name__ == '__main__':
     #           WEIGHT_KG: float,
     #           HEIGHT_CM: float,
     #           AGE: int,
-    #           SEX: int,                                   * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=2 *
-    #           DISEASES: [                                 * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=150 *
+    #           SEX: int,                                   * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=2 * onehot check
+    #           DISEASES: [                                 * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=150 * onehot check
     #               diseaseID_1: int (idx),
     #               diseaseID_2: int (idx),
     #               ...
