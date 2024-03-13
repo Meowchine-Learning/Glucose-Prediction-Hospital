@@ -1,6 +1,7 @@
 import csv
 import json
 import numpy as np
+from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 
 
 def _dataInput_csv(filePath: str) -> list:
@@ -65,10 +66,10 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
 
     STUDY_ID = _getTableColumn(data_01_ENCOUNTERS, 0)
     ENCOUNTER_NUM = _getTableColumn(data_01_ENCOUNTERS, 1)
-    HOSP_DISCHRG_HRS_FROM_ADMIT = _getTableColumn(data_01_ENCOUNTERS, 4)
-    WEIGHT_KG = _getTableColumn(data_01_ENCOUNTERS, 5)
-    HEIGHT_CM = _getTableColumn(data_01_ENCOUNTERS, 6)
-    AGE = _getTableColumn(data_01_ENCOUNTERS, 7)
+    HOSP_DISCHRG_HRS_FROM_ADMIT = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 4)))
+    WEIGHT_KG = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 5)))
+    HEIGHT_CM = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 6)))
+    AGE = list(map(int, _getTableColumn(data_01_ENCOUNTERS, 7)))
     SEX_str = _getTableColumn(data_01_ENCOUNTERS, 8)
     SEX = [0 if case == "MALE" else 1 for case in SEX_str]
     del SEX_str
@@ -154,8 +155,8 @@ def preprocess_05_ORDERS_ACTIVITY(DATA, filePath_05_ORDERS_ACTIVITY) -> dict:
             _initiateIDCase(DATA, ID)
 
         DATA[ID]["ORDERS_ACTIVITY"].append(PROC_ID[idx])
-        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(PROC_START_HRS_FROM_ADMIT[idx])
-        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT[idx])
+        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
+        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
 
     print("√ 05_ORDERS_ACTIVITY")
     return DATA
@@ -186,8 +187,8 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
         prod_ids[procs[PROC_ID[idx]]] = 1
 
         DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID[idx])
-        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(PROC_START_HRS_FROM_ADMIT[idx])
-        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT[idx])
+        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
+        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
 
     print("√ 06_ORDERS_NUTRITION")
     return DATA
@@ -227,9 +228,11 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
         lab_ids = np.zeros(len(labs))
         lab_ids[labs[COMPONENT_ID[idx]]] = 1
 
-        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(RESULT_HRS_FROM_ADMIT[idx])
+        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(float(RESULT_HRS_FROM_ADMIT[idx]))
         DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID[idx])
-        DATA[ID]["LAB_ORD_VALUE"].append(ORD_VALUE[idx])
+        if (ORD_VALUE[idx][0] == '>') or (ORD_VALUE[idx][0] == '<'):
+            ORD_VALUE[idx] = ORD_VALUE[idx][1:]
+        DATA[ID]["LAB_ORD_VALUE"].append(float(ORD_VALUE[idx]))
     print("√ 09_LABS")
     return DATA
 
@@ -252,17 +255,14 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
     DISP_DAYS_PRIOR = _getTableColumn(data_12_PIN, 2)
     SUPP_DRUG_ATC_CODE = _getTableColumn(data_12_PIN, 3)
 
-    drugMenu = list(set(MEDICATION_ATC + SUPP_DRUG_ATC_CODE))
-    # drugMenu --> One-hot MODEL
-
     for idx, value in enumerate(STUDY_ID_10):
         ID = str(STUDY_ID_10[idx] + ENCOUNTER_NUM_10[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
         DATA[ID]["MEDICATION_ATC"].append(MEDICATION_ATC[idx])  # todo One-hot encoding, same drugMenu
-        DATA[ID]["MEDICATION_SIG"].append(SIG[idx])
-        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(TAKEN_HRS_FROM_ADMIT[idx])
+        DATA[ID]["MEDICATION_SIG"].append(float(SIG[idx]))
+        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(float(TAKEN_HRS_FROM_ADMIT[idx]))
         DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + DOSE_UNIT[idx] + ROUTE[idx]))
 
     for idx, value in enumerate(STUDY_ID_12):
@@ -274,7 +274,11 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in DISP_DAYS_PRIOR[idx]]  # --> Map 2 yr range to 0~10;
         DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(DISP_DAYS_PRIOR_NORM)
 
-    print("√ 10_MEDICATION_ADMINISTRATIONS_and_12_PIN")
+
+    drugMenu = list(set(MEDICATION_ATC + SUPP_DRUG_ATC_CODE))
+
+    print("√ 10_MEDICATION_ADMINISTRATIONS")
+    print("√ 12_PIN")
     return DATA
 
 
@@ -324,8 +328,6 @@ def preprocessData() -> dict:
 
     return DATA
 
-
-# * ENCODING: APPLY Doc2Vec *
 
 
 if __name__ == '__main__':
@@ -395,7 +397,7 @@ if __name__ == '__main__':
     #               LAB_ORD_VALUE_TIME_2: float，
     #               ...
     #           ],
-    #           MEDICATION_ATC: [                           * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=??*
+    #           MEDICATION_ATC: [                           * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92*
     #               MEDICATION_ATC_1: str;
     #               MEDICATION_ATC_2: str;
     #               ...
@@ -415,7 +417,7 @@ if __name__ == '__main__':
     #               MEDICATION_ACTION_1: str;
     #               ...
     #           ],
-    #           PRIOR_MEDICATION_ATC_CODE: [                 * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=??*
+    #           PRIOR_MEDICATION_ATC_CODE: [                 * ENCODING: APPLY ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92?*
     #               PRIOR_DRUG_TAKEN_ATC_CODE_1: str;
     #               PRIOR_DRUG_TAKEN_ATC_CODE_2: str;
     #               ...
@@ -434,8 +436,8 @@ if __name__ == '__main__':
 
     """ Sequential Logics """
     # TODO
-    #  PRIOR_TAKEN_TIME ------> ADMIT_TIME ------> NUTRITION/ACTIVITY/TREATMENT/TEST_TIME ------> DISCHRG_TIME
-    #      [INIT, <0 h]        [INIT, 0 h]             [Comparing to ADMIT_TIME]          [END, Comparing to ADMIT_TIME]
+    #  ------> ADMIT_TIME ------> NUTRITION/ACTIVITY/TREATMENT/TEST_TIME ------> DISCHRG_TIME ------>
+    #     [INIT, 0_hr]       [Comparing to ADMIT_TIME, i_hr, 0 < i < n]      [END, n_hr, Comparing to ADMIT_TIME]
 
     """ Data Cleaning and Preprocessing """
     dataPreprocessed = preprocessData()
