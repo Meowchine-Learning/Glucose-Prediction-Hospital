@@ -84,6 +84,8 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
         DATA[ID]["HEIGHT_CM"] = HEIGHT_CM
         DATA[ID]["AGE"] = AGE
         DATA[ID]["SEX"] = SEX
+
+    print("√ 01_ENCOUNTERS")
     return DATA
 
 
@@ -110,6 +112,8 @@ def preprocess_02_ADMIT_DX(DATA, filePath_02_ADMIT_DX) -> dict:
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
         DATA[ID]["DISEASES"] = diseases
+
+    print("√ 02_ADMIT_DX")
     return DATA
 
 
@@ -123,10 +127,9 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
     procs = dict()
     num = 0
     for idx, value in enumerate(STUDY_ID):
-        for proc in OR_PROC_ID[idx].split(", "):
-            if not proc in procs:
-                procs[proc] = num
-                num += 1
+        if not OR_PROC_ID[idx] in procs:
+            procs[OR_PROC_ID[idx]] = num
+            num += 1
 
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
@@ -135,6 +138,8 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
         DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
+
+    print("√ 04_OR_PROC_ORDERS")
     return DATA
 
 
@@ -156,6 +161,7 @@ def preprocess_05_ORDERS_ACTIVITY(DATA, filePath_05_ORDERS_ACTIVITY) -> dict:
         DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(PROC_START_HRS_FROM_ADMIT)
         DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT)
 
+    print("√ 05_ORDERS_ACTIVITY")
     return DATA
 
 
@@ -168,15 +174,26 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
     PROC_START_HRS_FROM_ADMIT = _getTableColumn(data_06_ORDERS_NUTRITION, 6)
     ORDER_DISCON_HRS_FROM_ADMIT = _getTableColumn(data_06_ORDERS_NUTRITION, 8)
 
+    procs = dict()
+    num = 0
+    for idx, value in enumerate(STUDY_ID):
+        if not PROC_ID[idx] in procs:
+            procs[PROC_ID[idx]] = num
+            num += 1
+
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
+        
+        prod_ids = np.zeros(len(procs))
+        prod_ids[procs[PROC_ID[idx]]] = 1
 
         DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID)
         DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(PROC_START_HRS_FROM_ADMIT)
         DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(ORDER_DISCON_HRS_FROM_ADMIT)
 
+    print("√ 06_ORDERS_NUTRITION")
     return DATA
 
 
@@ -199,14 +216,26 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
     COMPONENT_ID = _getTableColumn(data_09_LABS, 4)
     ORD_VALUE = _getTableColumn(data_09_LABS, 5)
 
+    labs = dict()
+    num = 0
+    for idx, value in enumerate(STUDY_ID):
+        if not COMPONENT_ID[idx] in labs:
+            labs[COMPONENT_ID[idx]] = num
+            num += 1
+
     for idx, value in enumerate(STUDY_ID):
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
+        lab_ids = np.zeros(len(labs))
+        lab_ids[labs[COMPONENT_ID[idx]]] = 1
+
         DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(RESULT_HRS_FROM_ADMIT)
         DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID)
         DATA[ID]["LAB_ORD_VALUE"].append(ORD_VALUE)
+
+    print("√ 09_LABS")
 
     return DATA
 
@@ -251,6 +280,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in DISP_DAYS_PRIOR]     # --> Map 2 yr range to 0~10;
         DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(DISP_DAYS_PRIOR_NORM)
 
+    print("√ 10_MEDICATION_ADMINISTRATIONS_and_12_PIN")
     return DATA
 
 
@@ -342,7 +372,7 @@ if __name__ == '__main__':
     #               activity_02_stopTime: time,
     #               ...
     #           ],
-    #           ORDERS_NUTRITION: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=15 *
+    #           ORDERS_NUTRITION: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=15 * onehot check
     #               nutrition_01: int,
     #               nutrition_02: int,
     #               ...
@@ -362,7 +392,7 @@ if __name__ == '__main__':
     #               LAB_RESULT_TIME_2: time,
     #               ...
     #           ],
-    #           LAB_COMPONENT_ID: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=16 *
+    #           LAB_COMPONENT_ID: [                         * ENCODING: APPLY ONE-HOT, TOTAL_VARIETIES=16 * onehot check
     #               LAB_COMPONENT_TIME_1: time,
     #               LAB_COMPONENT_TIME_2: time,
     #               ...
