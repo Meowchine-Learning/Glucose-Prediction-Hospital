@@ -40,7 +40,6 @@ def _initiateIDCase(DATA, ID):
     DATA[ID]["OR_PROC_ID_ONEHOT"] = []
 
     # TABLE 05 & 06
-    DATA[ID]["ORDERS_ACTIVITY"] = []
     DATA[ID]["ORDERS_ACTIVITY_START_TIME"] = []
     DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"] = []
     DATA[ID]["ORDERS_NUTRITION"] = []
@@ -141,7 +140,6 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
         prod_ids[procs[OR_PROC_ID[idx]]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
-
         DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
         if DATA[ID]["OR_PROC_ID_ONEHOT"] == []:
             DATA[ID]["OR_PROC_ID_ONEHOT"] = prod_ids
@@ -165,7 +163,6 @@ def preprocess_05_ORDERS_ACTIVITY(DATA, filePath_05_ORDERS_ACTIVITY) -> dict:
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["ORDERS_ACTIVITY"].append(PROC_ID[idx])
         DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
         DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
 
@@ -292,9 +289,9 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
             _initiateIDCase(DATA, ID)
 
         DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"].append(str(SUPP_DRUG_ATC_CODE[idx]))
-        DISP_DAYS_PRIOR_NORM = [int(int(days) / 730 * 10) for days in
-                                DISP_DAYS_PRIOR[idx]]  # --> Map 2 yr range to 0~10;
-        DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(list(map(int, DISP_DAYS_PRIOR_NORM)))
+        a = int(DISP_DAYS_PRIOR[idx])
+        DISP_DAYS_PRIOR_NORM = int(DISP_DAYS_PRIOR[idx]) // 73     # --> Map 2 yr range to 0~10;
+        DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(int(DISP_DAYS_PRIOR_NORM))
 
 
     # Create Encoders
@@ -407,17 +404,12 @@ if __name__ == '__main__':
     #               diseaseID_2: int (idx),
     #               ...
     #           ],
-    #           OR_PROC_ID: [                               * ENCODING: ONE-HOT, TOTAL_VARIETIES=108 *
+    #           OR_PROC_ID: [                               * ENCODING: ONE-HOT APPLIED, TOTAL_VARIETIES=108 *
     #               OR_PROC_ID_01,
     #               OR_PROC_ID_02,
     #               ...
     #           ],
-    #           ORDERS_ACTIVITY: [                          * ENCODING: ALL SAME, TOTAL_VARIETIES=1 *
-    #               activity_01: int (idx),
-    #               activity_02: int (idx),
-    #               ...
-    #           ],
-    #           ORDERS_ACTIVITY_START_TIME: [               <ACTIVITY_TIME: Relative start time>
+    #           ORDERS_ACTIVITY_START_TIME: [               <ACTIVITY_TIME: Relative start time, all activities have same ID -> ignored>
     #               activity_01_startTime: time,
     #               activity_02_startTime: time,
     #               ...
@@ -457,7 +449,7 @@ if __name__ == '__main__':
     #               LAB_ORD_VALUE_TIME_2: float，
     #               ...
     #           ],
-    #           MEDICATION_ATC: [                           * ENCODING: ONE-HOT, share the same drugMenu, TOTAL_VARIETIES=92*
+    #           MEDICATION_ATC: [
     #               MEDICATION_ATC_1: str;
     #               MEDICATION_ATC_2: str;
     #               ...
@@ -488,7 +480,7 @@ if __name__ == '__main__':
     #           PRIOR_MEDICATION_ATC_ENCODED: [             * ENCODING: Doc2Vec APPLIED -> `DRUGS_d2vModel.pkl` *
     #              <Doc2Vec_ENCODED_VECTOR, Size=5>
     #           ],
-    #           PRIOR_MEDICATION_DISP_DAYS_NORM: [          <TREATMENT_TIME_NORMED: As personal features, like height>
+    #           PRIOR_MEDICATION_DISP_DAYS_NORM: [          * ENCODING: ONE-HOT, TOTAL_VARIETIES=10, just as features not time *
     #               PRIOR_MEDICATION_DISP_DAYS_NORM_1: int;     --> [0, 10], indicates how far the time prior
     #               PRIOR_MEDICATION_DISP_DAYS_NORM_2: int;
     #               ...
