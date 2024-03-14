@@ -13,8 +13,84 @@ def _dataInput_csv(filePath: str) -> list:
     return IN
 
 
-def _dataOutput_json(DATA, filePath: str = "output/DATA.json") -> None:
-    with open(filePath, mode='w') as file:
+def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
+    FEATURE_DATA = {}
+    SEQUENCE_DATA = {}
+    for ID in DATA.keys():
+        DATAForCurrID = DATA[ID]
+
+        # FEATURE DATASET:
+        FEATURE_DATA[ID] = {}
+        FEATURE_DATA[ID]["WEIGHT_KG"] = DATAForCurrID["WEIGHT_KG"]
+        FEATURE_DATA[ID]["HEIGHT_CM"] = DATAForCurrID["HEIGHT_CM"]
+        FEATURE_DATA[ID]["AGE"] = DATAForCurrID["AGE"]
+        FEATURE_DATA[ID]["SEX"] = DATAForCurrID["SEX"]
+        FEATURE_DATA[ID]["DISEASES"] = DATAForCurrID["DISEASES"]
+        FEATURE_DATA[ID]["OR_PROC_ID"] = DATAForCurrID["OR_PROC_ID"]
+        FEATURE_DATA[ID]["ORDERS_NUTRITION"] = DATAForCurrID["ORDERS_NUTRITION"]
+        FEATURE_DATA[ID]["LAB_COMPONENT_ID"] = DATAForCurrID["LAB_COMPONENT_ID"]
+        FEATURE_DATA[ID]["LAB_ORD_VALUE"] = DATAForCurrID["LAB_ORD_VALUE"]
+        FEATURE_DATA[ID]["MEDICATION_ATC_ENCODED"] = DATAForCurrID["MEDICATION_ATC_ENCODED"]
+        FEATURE_DATA[ID]["MEDICATION_ACTIONS"] = DATAForCurrID["MEDICATION_ACTIONS"]
+        FEATURE_DATA[ID]["MEDICATION_ACTIONS_ENCODED"] = DATAForCurrID["MEDICATION_ACTIONS_ENCODED"]
+        FEATURE_DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = DATAForCurrID["PRIOR_MEDICATION_ATC_ENCODED"]
+        FEATURE_DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"] = DATAForCurrID["PRIOR_MEDICATION_DISP_DAYS_NORM"]
+
+        # SEQUENCE DATASET:
+        SEQUENCE_DATA[ID] = {}
+        temp = {str(DATAForCurrID["HOSP_ADMIT_TIME"]): "INIT"}
+
+        for idx, time in enumerate(DATAForCurrID["ORDERS_ACTIVITY_START_TIME"]):
+            temp[str(time)] = "ACTIVITY_START"
+        for idx, time in enumerate(DATAForCurrID["ORDERS_ACTIVITY_STOP_TIME"]):
+            temp[str(time)] = "ACTIVITY_STOP"
+
+        for idx, time in enumerate(DATAForCurrID["ORDERS_NUTRITION_START_TIME"]):
+            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION_START_TIME"][idx])
+            temp[str(time)] = f"NUTRITION_START_TYPE={NUTRITION_TYPE}"
+        for idx, time in enumerate(DATAForCurrID["ORDERS_NUTRITION_STOP_TIME"]):
+            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION_START_TIME"][idx])
+            temp[str(time)] = f"NUTRITION_STOP_TYPE={NUTRITION_TYPE}"
+
+        for idx, time in enumerate(DATAForCurrID["LAB_RESULT_HRS_FROM_ADMIT"]):
+            LAB_TYPE = str(DATAForCurrID["LAB_COMPONENT_ID"][idx])
+            LAB_RESULT = str(DATAForCurrID["LAB_ORD_VALUE"][idx])
+            temp[str(time)] = f"LAB_TYPE={LAB_TYPE}_RESULT={LAB_RESULT}"
+
+        for idx, time in enumerate(DATAForCurrID["MEDICATION_TAKEN_HRS_FROM_ADMIT"]):
+            MEDICATION_TYPE = str(DATAForCurrID["MEDICATION_ATC"][idx])
+            MEDICATION_SIG = str(DATAForCurrID["MEDICATION_SIG"][idx])
+            temp[str(time)] = f"MEDICATION_TYPE={MEDICATION_TYPE}_SIG={MEDICATION_SIG}"
+
+        temp[str(DATAForCurrID["HOSP_DISCHRG_HRS_FROM_ADMIT"])] = "END"
+
+        SEQUENCE = []
+        for time in temp.keys():
+            if time == "None":
+                SEQUENCE.append(99999.9)
+                continue
+            SEQUENCE.append(float(time))
+        try:
+            SEQUENCE = sorted(SEQUENCE)
+        except:
+            a = 0
+        ACTIONS = []
+        for time in SEQUENCE:
+            if time != 99999.9:
+                ACTIONS.append(temp[str(time)])
+            else:
+                ACTIONS.append(temp["None"])
+        SEQUENCE_DATA[ID] = {}
+        SEQUENCE_DATA[ID]["SEQUENCE"] = SEQUENCE
+        SEQUENCE_DATA[ID]["ACTIONS"] = ACTIONS
+
+    with open(dirPath + '/FEATURE_DATA.json', mode='w') as file:
+        json.dump(FEATURE_DATA, file, indent=4)
+    with open(dirPath + '/SEQUENCE_DATA.json', mode='w') as file:
+        json.dump(SEQUENCE_DATA, file, indent=4)
+
+    # Overall DATASET:
+    with open(dirPath + '/DATA.json', mode='w') as file:
         json.dump(DATA, file, indent=4)
 
 
@@ -26,7 +102,7 @@ def _initiateIDCase(DATA, ID):
     # todo: see __main__ for instructions
     # TABLE 01
     DATA[ID] = {}
-    DATA[ID]["HOSP_ADMIT_TIME"] = 0
+    DATA[ID]["HOSP_ADMIT_TIME"] = 0.0
     DATA[ID]["HOSP_DISCHRG_HRS_FROM_ADMIT"] = None
 
     # TABLE 02
@@ -72,6 +148,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
     STUDY_ID = _getTableColumn(data_01_ENCOUNTERS, 0)
     ENCOUNTER_NUM = _getTableColumn(data_01_ENCOUNTERS, 1)
     HOSP_DISCHRG_HRS_FROM_ADMIT = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 4)))
+    HOSP_DISCHRG_HRS_FROM_ADMIT = [round(time, 4) for time in HOSP_DISCHRG_HRS_FROM_ADMIT]
     WEIGHT_KG = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 5)))
     HEIGHT_CM = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 6)))
     AGE = list(map(int, _getTableColumn(data_01_ENCOUNTERS, 7)))
@@ -142,9 +219,9 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
             _initiateIDCase(DATA, ID)
         DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
         if DATA[ID]["OR_PROC_ID_ONEHOT"] == []:
-            DATA[ID]["OR_PROC_ID_ONEHOT"] = prod_ids
+            DATA[ID]["OR_PROC_ID_ONEHOT"] = list(prod_ids)
         else:
-            DATA[ID]["OR_PROC_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["OR_PROC_ID_ONEHOT"], prod_ids)]
+            DATA[ID]["OR_PROC_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["OR_PROC_ID_ONEHOT"], list(prod_ids))]
     print("√ 04_OR_PROC_ORDERS")
     return DATA
 
@@ -163,8 +240,8 @@ def preprocess_05_ORDERS_ACTIVITY(DATA, filePath_05_ORDERS_ACTIVITY) -> dict:
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
 
-        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
-        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
+        DATA[ID]["ORDERS_ACTIVITY_START_TIME"].append(round(float(PROC_START_HRS_FROM_ADMIT[idx]), 4))
+        DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"].append(round(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]), 4))
 
     print("√ 05_ORDERS_ACTIVITY")
     return DATA
@@ -196,11 +273,11 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
 
         DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID[idx])
         if DATA[ID]["ORDERS_NUTRITION_ONEHOT"] == []:
-            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = prod_ids
+            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = list(prod_ids)
         else:
-            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["ORDERS_NUTRITION_ONEHOT"], prod_ids)]
-        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
-        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
+            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["ORDERS_NUTRITION_ONEHOT"], list(prod_ids))]
+        DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(round(float(PROC_START_HRS_FROM_ADMIT[idx]), 4))
+        DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(round(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]), 4))
 
     print("√ 06_ORDERS_NUTRITION")
     return DATA
@@ -240,13 +317,12 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
         lab_ids = np.zeros(len(labs))
         lab_ids[labs[COMPONENT_ID[idx]]] = 1
 
-        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(float(RESULT_HRS_FROM_ADMIT[idx]))
+        DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(round(float(RESULT_HRS_FROM_ADMIT[idx]), 4))
         DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID[idx])
         if DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] == []:
-            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = lab_ids
+            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = list(lab_ids)
         else:
-            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["LAB_COMPONENT_ID_ONEHOT"], lab_ids)]
-        print(DATA[ID]["LAB_COMPONENT_ID_ONEHOT"])
+            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["LAB_COMPONENT_ID_ONEHOT"], list(lab_ids))]
         if (ORD_VALUE[idx][0] == '>') or (ORD_VALUE[idx][0] == '<'):
             ORD_VALUE[idx] = ORD_VALUE[idx][1:]
         DATA[ID]["LAB_ORD_VALUE"].append(float(ORD_VALUE[idx]))
@@ -280,7 +356,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
 
         DATA[ID]["MEDICATION_ATC"].append(str(MEDICATION_ATC[idx]))
         DATA[ID]["MEDICATION_SIG"].append(float(SIG[idx]))
-        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(float(TAKEN_HRS_FROM_ADMIT[idx]))
+        DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(round(float(TAKEN_HRS_FROM_ADMIT[idx]), 4))
         DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + DOSE_UNIT[idx] + ROUTE[idx]))
 
     for idx, value in enumerate(STUDY_ID_12):
