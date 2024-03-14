@@ -17,27 +17,16 @@ def split_time(time):
     pass
 
 
-def create_dataset(df_ENCOUNTERS, df_LABS):
-    idx1 = df_ENCOUNTERS.index
-    idx2 = df_LABS.index
-    diff = idx2.difference(idx1)
-
-    df3 = df_ENCOUNTERS.merge(
-        df_LABS[[]], left_on='STUDY_ID', right_index=True, how='left')
-    hospital_stay = df3.loc[:, "HOSP_DISCHRG_HRS_FROM_ADMIT"]
-    hospital_intvs = np.ceil(hospital_stay.div(
-        TIME_INTERVAL)).astype(np.int32)
-    rows = hospital_intvs.to_numpy().sum()
-    dataset = [[] for i in range(1, rows)]
-    print(len(dataset))
-    return dataset
-
-
 def preprocess_ENCOUNTERS(filePath_ENCOUNTERS):
     data_ENCOUNTERS = pd.read_csv(filePath_ENCOUNTERS, index_col=0)
     df = data_ENCOUNTERS.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'],
                                      ascending=[True, True])
-    return df
+    hospital_stay = df.loc[:, "HOSP_DISCHRG_HRS_FROM_ADMIT"]
+    hospital_intvs = np.ceil(hospital_stay.div(
+        TIME_INTERVAL)).astype(np.int32)
+    rows = hospital_intvs.to_numpy().sum()
+    dataset = [[] for i in range(1, rows)]
+    return dataset
 
 
 def preprocess_ADMIT():
@@ -50,8 +39,10 @@ def preprocess_MEDICATION_ADMIN(dataset, filePath_MEDICATION_ADMIN):
                                            ascending=[True, True])
 
 
-def preprocess_LABS(dataset, df_LABS):
-    pass
+def preprocess_LABS(dataset, filePath_LABS):
+    data_LABS = pd.read_csv(filePath_LABS, index_col=0)
+    df = data_LABS.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'],
+                               ascending=[True, True])
 
 
 if __name__ == '__main__':
@@ -62,7 +53,6 @@ if __name__ == '__main__':
       Consider keeping lab values as constant to account from the last time they were measured
       NOTES: there are about 3.3 glucose measurements/24 hours across all patients, hourly might not be necessary? Might be more efficient to strcuture by mealtime
       772 patients out of the 803 are get glucose labs checked (exclude the rest?)
-      How are there only 772 indices left in encounters
       TODO: Figure out how to handle LABS after asking Anna
       dataPreprocessed =
        Hour |  BG  |   INSULIN_ADMINISTRATION [ATC,SIG] |   OR_PROC_ID  |   CURRENT_ICD10_LIST  |   AGE  |  HEIGHT_CM  |  WEIGHT_KG  |  SEX  |
@@ -71,10 +61,6 @@ if __name__ == '__main__':
           ...
   """
 
-    df_ENCOUNTERS = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
-    data_LABS = pd.read_csv("data/LABS.csv", index_col=0)
-    df_LABS = data_LABS.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'],
-                                    ascending=[True, True])
-    dataset = create_dataset(df_ENCOUNTERS, df_LABS)
-    preprocess_LABS(dataset, df_LABS)
+    dataset = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
+    preprocess_LABS(dataset, "data/LABS.csv")
     # calc_avg_mealtime("data/LABS.csv")
