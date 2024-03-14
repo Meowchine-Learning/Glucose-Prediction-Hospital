@@ -106,3 +106,9 @@
 # TODO
 #  ------> ADMIT_TIME ------> NUTRITION/ACTIVITY/TREATMENT/TEST_TIME ------> DISCHRG_TIME ------>
 #     [INIT, 0_hr]       [Comparing to ADMIT_TIME, i_hr, 0 < i < n]      [END, n_hr, Comparing to ADMIT_TIME]
+
+""" Dataset Explanations """
+# TODO
+#  1. DATA: Contains all personal features and event time records for each sample case;
+#  2. FEATURE_DATA: Contains only personal features for each sample case, ordered by `category`;
+#  3. SEQUENCE_DATA: Contains only event time records for each sample case, ordered by `time`;
