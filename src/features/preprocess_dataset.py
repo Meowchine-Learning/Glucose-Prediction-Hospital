@@ -13,7 +13,7 @@ def _dataInput_csv(filePath: str) -> list:
     return IN
 
 
-def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
+def _dataOutput_json(DATA, dirPath: str = "src/features/output/") -> None:
     FEATURE_DATA = {}
     SEQUENCE_DATA = {}
     for ID in DATA.keys():
@@ -27,14 +27,18 @@ def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
         FEATURE_DATA[ID]["SEX"] = DATAForCurrID["SEX"]
         FEATURE_DATA[ID]["DISEASES"] = DATAForCurrID["DISEASES"]
         FEATURE_DATA[ID]["OR_PROC_ID"] = DATAForCurrID["OR_PROC_ID"]
+        FEATURE_DATA[ID]["OR_PROC_ID_ONEHOT"] = DATAForCurrID["OR_PROC_ID_ONEHOT"]
         FEATURE_DATA[ID]["ORDERS_NUTRITION"] = DATAForCurrID["ORDERS_NUTRITION"]
+        FEATURE_DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = DATAForCurrID["ORDERS_NUTRITION_ONEHOT"]
         FEATURE_DATA[ID]["LAB_COMPONENT_ID"] = DATAForCurrID["LAB_COMPONENT_ID"]
+        FEATURE_DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = DATAForCurrID["LAB_COMPONENT_ID_ONEHOT"]
         FEATURE_DATA[ID]["LAB_ORD_VALUE"] = DATAForCurrID["LAB_ORD_VALUE"]
         FEATURE_DATA[ID]["MEDICATION_ATC_ENCODED"] = DATAForCurrID["MEDICATION_ATC_ENCODED"]
         FEATURE_DATA[ID]["MEDICATION_ACTIONS"] = DATAForCurrID["MEDICATION_ACTIONS"]
         FEATURE_DATA[ID]["MEDICATION_ACTIONS_ENCODED"] = DATAForCurrID["MEDICATION_ACTIONS_ENCODED"]
         FEATURE_DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = DATAForCurrID["PRIOR_MEDICATION_ATC_ENCODED"]
         FEATURE_DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"] = DATAForCurrID["PRIOR_MEDICATION_DISP_DAYS_NORM"]
+        FEATURE_DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"] = DATAForCurrID["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"]
 
         # SEQUENCE DATASET:
         SEQUENCE_DATA[ID] = {}
@@ -93,7 +97,6 @@ def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
     with open(dirPath + '/DATA.json', mode='w') as file:
         json.dump(DATA, file, indent=4)
 
-
 def _getTableColumn(data: list, index: int) -> list:
     return [row[index] for row in data if len(row) > index]
 
@@ -140,6 +143,7 @@ def _initiateIDCase(DATA, ID):
     # TABLE 12
     DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = []
     DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"] = []
+    DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"] = []
 
 
 def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
@@ -330,7 +334,7 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
     return DATA
 
 
-def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN, toReload_ACTIONS_d2vModel=True, toReload_DRUGS_d2vModel=True) -> dict:
+def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN, toReload_ACTIONS_d2vModel=False, toReload_DRUGS_d2vModel=False) -> dict:
     data_10_MEDICATION_ADMINISTRATIONS = _dataInput_csv(filePath_10_MEDICATION_ADMINISTRATIONS)
     data_12_PIN = _dataInput_csv(filePath_12_PIN)
 
@@ -357,7 +361,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         DATA[ID]["MEDICATION_ATC"].append(str(MEDICATION_ATC[idx]))
         DATA[ID]["MEDICATION_SIG"].append(float(SIG[idx]))
         DATA[ID]["MEDICATION_TAKEN_HRS_FROM_ADMIT"].append(round(float(TAKEN_HRS_FROM_ADMIT[idx]), 4))
-        DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + DOSE_UNIT[idx] + ROUTE[idx]))
+        DATA[ID]["MEDICATION_ACTIONS"].append(str(MAR_ACTION[idx] + " " + DOSE_UNIT[idx] + " " + ROUTE[idx]))
 
     for idx, value in enumerate(STUDY_ID_12):
         ID = str(STUDY_ID_12[idx] + ENCOUNTER_NUM_12[idx])
@@ -369,10 +373,15 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         DISP_DAYS_PRIOR_NORM = int(DISP_DAYS_PRIOR[idx]) // 73     # --> Map 2 yr range to 0~10;
         DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM"].append(int(DISP_DAYS_PRIOR_NORM))
 
+        if DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"] == []:
+            DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"] = list(np.zeros(11))
+        else:
+            DATA[ID]["PRIOR_MEDICATION_DISP_DAYS_NORM_ONEHOT"][int(DISP_DAYS_PRIOR_NORM)] += 1
+
 
     # Create Encoders
     if toReload_ACTIONS_d2vModel:
-        ACTIONS_d2vModel = Doc2Vec.load("encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel = Doc2Vec.load("src/features/encoders/ACTIONS_d2vModel.pkl")
     else:
         ACTIONS_Documents = []
         for ID in DATA.keys():
@@ -383,10 +392,10 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                    window=6,
                                    min_count=1,
                                    workers=10)
-        ACTIONS_d2vModel.save("encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel.save("src/features/encoders/ACTIONS_d2vModel.pkl")
 
     if toReload_DRUGS_d2vModel:
-        DRUGS_d2vModel = Doc2Vec.load("encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel = Doc2Vec.load("src/features/encoders/DRUGS_d2vModel.pkl")
     else:
         DRUGS_Documents = []
         for ID in DATA.keys():
@@ -399,7 +408,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                  window=6,
                                  min_count=1,
                                  workers=10)
-        DRUGS_d2vModel.save("encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel.save("src/features/encoders/DRUGS_d2vModel.pkl")
 
     # Encoding Processes:
     for idx, value in enumerate(STUDY_ID_10):
