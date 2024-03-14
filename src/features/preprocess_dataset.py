@@ -37,18 +37,21 @@ def _initiateIDCase(DATA, ID):
 
     # TABLE 04
     DATA[ID]["OR_PROC_ID"] = []
+    DATA[ID]["OR_PROC_ID_ONEHOT"] = []
 
     # TABLE 05 & 06
     DATA[ID]["ORDERS_ACTIVITY"] = []
     DATA[ID]["ORDERS_ACTIVITY_START_TIME"] = []
     DATA[ID]["ORDERS_ACTIVITY_STOP_TIME"] = []
     DATA[ID]["ORDERS_NUTRITION"] = []
+    DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = []
     DATA[ID]["ORDERS_NUTRITION_START_TIME"] = []
     DATA[ID]["ORDERS_NUTRITION_STOP_TIME"] = []
 
     # TABLE 09
     DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"] = []
     DATA[ID]["LAB_COMPONENT_ID"] = []
+    DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = []
     DATA[ID]["LAB_ORD_VALUE"] = []
 
     # TABLE 10
@@ -85,6 +88,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
         DATA[ID]["HEIGHT_CM"] = HEIGHT_CM[idx]
         DATA[ID]["AGE"] = AGE[idx]
         DATA[ID]["SEX"] = SEX[idx]
+
     print("√ 01_ENCOUNTERS")
     return DATA
 
@@ -137,8 +141,12 @@ def preprocess_04_OR_PROC_ORDERS(DATA, filePath_04_OR_PROC_ORDERS) -> dict:
         prod_ids[procs[OR_PROC_ID[idx]]] = 1
         if DATA.get(ID) is None:
             _initiateIDCase(DATA, ID)
-        DATA[ID]["OR_PROC_ID"].append(prod_ids)
 
+        DATA[ID]["OR_PROC_ID"].append(OR_PROC_ID[idx])
+        if DATA[ID]["OR_PROC_ID_ONEHOT"] == []:
+            DATA[ID]["OR_PROC_ID_ONEHOT"] = prod_ids
+        else:
+            DATA[ID]["OR_PROC_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["OR_PROC_ID_ONEHOT"], prod_ids)]
     print("√ 04_OR_PROC_ORDERS")
     return DATA
 
@@ -189,8 +197,11 @@ def preprocess_06_ORDERS_NUTRITION(DATA, filePath_06_ORDERS_NUTRITION) -> dict:
         prod_ids = np.zeros(len(procs))
         prod_ids[procs[PROC_ID[idx]]] = 1
 
-        DATA[ID]["ORDERS_NUTRITION"].append(prod_ids)
-
+        DATA[ID]["ORDERS_NUTRITION"].append(PROC_ID[idx])
+        if DATA[ID]["ORDERS_NUTRITION_ONEHOT"] == []:
+            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = prod_ids
+        else:
+            DATA[ID]["ORDERS_NUTRITION_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["ORDERS_NUTRITION_ONEHOT"], prod_ids)]
         DATA[ID]["ORDERS_NUTRITION_START_TIME"].append(float(PROC_START_HRS_FROM_ADMIT[idx]))
         DATA[ID]["ORDERS_NUTRITION_STOP_TIME"].append(float(ORDER_DISCON_HRS_FROM_ADMIT[idx]))
 
@@ -233,7 +244,12 @@ def preprocess_09_LABS(DATA, filePath_09_LABS) -> dict:
         lab_ids[labs[COMPONENT_ID[idx]]] = 1
 
         DATA[ID]["LAB_RESULT_HRS_FROM_ADMIT"].append(float(RESULT_HRS_FROM_ADMIT[idx]))
-        DATA[ID]["LAB_COMPONENT_ID"].append(lab_ids)
+        DATA[ID]["LAB_COMPONENT_ID"].append(COMPONENT_ID[idx])
+        if DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] == []:
+            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = lab_ids
+        else:
+            DATA[ID]["LAB_COMPONENT_ID_ONEHOT"] = [a + b for a, b in zip(DATA[ID]["LAB_COMPONENT_ID_ONEHOT"], lab_ids)]
+        print(DATA[ID]["LAB_COMPONENT_ID_ONEHOT"])
         if (ORD_VALUE[idx][0] == '>') or (ORD_VALUE[idx][0] == '<'):
             ORD_VALUE[idx] = ORD_VALUE[idx][1:]
         DATA[ID]["LAB_ORD_VALUE"].append(float(ORD_VALUE[idx]))
