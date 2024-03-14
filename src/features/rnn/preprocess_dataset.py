@@ -3,6 +3,14 @@ import numpy as np
 import csv
 
 
+def calc_avg_mealtime(filePath_LABS):
+    LABS_df = pd.read_csv(filePath_LABS, index_col=0)
+    col = LABS_df.loc[:, "RESULT_TOD"]
+
+    out = list(col[col.str.contains("^([5-9]|10|11):.*$")])
+    print(out[10:20])
+
+
 def determine_meal(time):
     pass
 
@@ -17,7 +25,7 @@ if __name__ == '__main__':
     """ Data Structure 
       Group by STUDY_ID, then group by ENCOUNTER_NUM
       Do need to indicate which meal it is for the model input?
-      Consider having hourly time intervals to account for many measurements throughout the day
+      Consider having hourly time intervals to account for many measurements throughout the day (probably not)
       Consider keeping lab values as constant to account from the last time they were measured
       TODO: Figure out how to handle LABS after asking Anna
       dataPreprocessed =
@@ -28,3 +36,4 @@ if __name__ == '__main__':
   """
 
     preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
+    calc_avg_mealtime("data/LABS.csv")
