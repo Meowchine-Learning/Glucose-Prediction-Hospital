@@ -7,14 +7,24 @@ def main():
     df_map = pd.read_excel(
         "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
 
-    encounters = df_map["ENCOUNTERS"]
-    admit_dx = df_map["ADMIT_DX"]
-    or_proc_orders = df_map["OR_PROC_ORDERS"]
-    orders_activity = df_map["ORDERS_ACTIVITY"]
-    orders_nutrition = df_map["ORDERS_NUTRITION"]
-    labs = df_map["LABS"]
-    med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
-    pin = df_map["PIN"]
+    encounters = df_map["ENCOUNTERS"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM'], ascending=[True, True])
+    admit_dx = df_map["ADMIT_DX"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM'], ascending=[True, True])
+    or_proc_orders = df_map["OR_PROC_ORDERS"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'PROCEDURE_START_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    orders_activity = df_map["ORDERS_ACTIVITY"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    orders_nutrition = df_map["ORDERS_NUTRITION"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    med_orders = df_map["MEDICATION_ORDERS"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    labs = df_map["LABS"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'RESULT_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    med_admin = df_map["MEDICATION_ADMINISTRATIONS"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'TAKEN_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    pin = df_map["PIN"].sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'DISP_DAYS_PRIOR'], ascending=[True, True, True])
 
     clean_encounters(encounters)
     clean_admit(admit_dx)
@@ -25,42 +35,55 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    encoding("ENCOUNTERS",encounters, ["SEX"])
-    encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
-    encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["COMPONENT_ID"])
-    encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
+    # experiment(med_orders, med_admin)
 
+    encoding("ENCOUNTERS", encounters, ["SEX"])
+    encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
+    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
+    encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
+    encoding("LABS", labs, ["COMPONENT_ID"])
+    encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
+             "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
 
 
-def encoding(name,df,column_list):
+def experiment(orders_df, admin_df):
+
+    f_admin_df = admin_df[admin_df.MEDICATION_NAME.str.contains(
+        r'.*INSULIN.*', regex=True, na=False)]
+
+    insulin_iv = f_admin_df[f_admin_df['ROUTE'] ==
+                            "intravenous"]
+    print(set(insulin_iv["MEDICATION_ATC"]))
+
+
+def encoding(name, df, column_list):
     def preprocess_column(column):
         # Convert numerical values to strings
         column = column.astype(str)
         return column
-    if column_list[0]== "CURRENT_ICD10_LIST":
+    if column_list[0] == "CURRENT_ICD10_LIST":
         # Example usage
         df["CURRENT_ICD10_LIST"] = preprocess_column(df["CURRENT_ICD10_LIST"])
 
     for column in column_list:
         # Perform one-hot encoding
         categories = df[column].unique()
-        np_column = df[column].values.flatten()  # numpy array 
-        categories = np.unique(np_column)  # categories 
-        category_index = {category: index for index, category in enumerate(categories)}
+        np_column = df[column].values.flatten()  # numpy array
+        categories = np.unique(np_column)  # categories
+        category_index = {category: index for index,
+                          category in enumerate(categories)}
         one_hot_encoded = []
 
         for i in range(len(np_column)):
             data = np_column[i]
-            one_hot = [0] * len(categories) # [0,0]
-            index = np.where(data==categories)[0][0]
+            one_hot = [0] * len(categories)  # [0,0]
+            index = np.where(data == categories)[0][0]
             one_hot[index] = 1
             one_hot_encoded.append(one_hot)
-        
+
         # Replace the values in the "SEX" column with one-hot encoded values
         df[column] = one_hot_encoded
 
@@ -266,6 +289,8 @@ def clean_med_admin(df):
     for i in range(len(methylprednisolone)):
         df.loc[methylprednisolone[i], "MEDICATION_ATC"] = 'H02AB04'
 
+    # IV_pump_times(df)
+
     # infusion unit fixes
     inf_unit_fixes = df[df['INFUSION_RATE_UNIT'] == 'mL/hr'].index
     for i in range(len(inf_unit_fixes)):
@@ -286,9 +311,6 @@ def clean_med_admin(df):
     med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
                   6000183: "intravenous", 174845: "oral", 2365: "intravenous", 33009: "oral"}
 
-    # insulin_list = ["17405", "28534", "30080", "124838", "124845", "124847", "124854", "124857", "125482", "130342", "134056", "162674", "166114", "169138", "199429", "4002243",
-    #                "4002245", "4002455", "4002541", "4002722", "4002723", "4002884", "4002908", "4002909", "6000598", "6001625", "6002910", "6004503", "6004606"]
-
     # get rows where route is empty
     list = df[(df['ROUTE'].notnull()) == False].index
 
@@ -301,8 +323,17 @@ def clean_med_admin(df):
     df.drop(empty_vals, axis=0, inplace=True)
 
     # drop columns
-    df.drop(['MEDICATION_ID', 'MEDICATION_NAME', 'INFUSION_RATE',
+    df.drop(['MEDICATION_ID', 'INFUSION_RATE',
             'INFUSION_RATE_UNIT', 'STRENGTH'], axis=1, inplace=True)
+
+
+def IV_pump_times(med_admin_df):
+    insulin = ["A10AB01", "A10AB04"]
+
+    insulin_df = med_admin_df[med_admin_df['COMPONENT_ID'] ==
+                              "[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"]
+    start = ["New Bag", "Restarted", "Continued from OR",
+             "Continued from Pre-op", "Given"]
 
 
 def clean_pin(df):
@@ -317,8 +348,6 @@ def write_to_csv(df_file, name):
 
 def preprocess_data(df_file, name):
     pass
-
-
 
 
 if __name__ == "__main__":
