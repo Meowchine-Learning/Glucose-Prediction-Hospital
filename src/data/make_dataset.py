@@ -289,8 +289,6 @@ def clean_med_admin(df):
     for i in range(len(methylprednisolone)):
         df.loc[methylprednisolone[i], "MEDICATION_ATC"] = 'H02AB04'
 
-    # IV_pump_times(df)
-
     # infusion unit fixes
     inf_unit_fixes = df[df['INFUSION_RATE_UNIT'] == 'mL/hr'].index
     for i in range(len(inf_unit_fixes)):
@@ -326,14 +324,58 @@ def clean_med_admin(df):
     df.drop(['MEDICATION_ID', 'INFUSION_RATE',
             'INFUSION_RATE_UNIT', 'STRENGTH'], axis=1, inplace=True)
 
+    IV_pump_times(df)
+
 
 def IV_pump_times(med_admin_df):
-    insulin = ["A10AB01", "A10AB04"]
 
-    insulin_df = med_admin_df[med_admin_df['COMPONENT_ID'] ==
-                              "[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"]
-    start = ["New Bag", "Restarted", "Continued from OR",
-             "Continued from Pre-op", "Given"]
+    insulin_names = ["INSULIN REGULAR (HUMULIN R) 1 UNIT/ML (100 UNIT) IN NACL 0.9% 100 ML INFUSION BAG",
+                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)"]
+
+    insulin_df = med_admin_df[(med_admin_df['MEDICATION_NAME'] ==
+                               insulin_names[0]) | (med_admin_df['MEDICATION_NAME'] ==
+                                                    insulin_names[1])]
+
+    start_actions = ["Restarted", "Continued from OR",
+                     "Continued from Pre-op", "Given", "New Bag", "Rate Change"]
+
+    current_id = 0
+    start_time = 0
+    stop_time = 0
+    success = 0
+    encounter_num = 0
+    for index, row in insulin_df.iterrows():
+        if (current_id != int(row["STUDY_ID"])) or (encounter_num != int(row["ENCOUNTER_NUM"])):
+            start_time, stop_time = 0, 0
+            current_id = int(row["STUDY_ID"])
+            encounter_num = int(row["ENCOUNTER_NUM"])
+        action = row["MAR_ACTION"]
+        if action in start_actions:
+            if start_time == 0:
+                if (stop_time == -1):
+                    print("Error! Check: {}, time {}", row["STUDY_ID"],
+                          row["TAKEN_HRS_FROM_ADMIT"])
+                else:
+                    success += 1
+                    start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+                    stop_time = -1
+        if action == "Stopped":
+            if start_time == 0:
+                try:
+                    if med_admin_df.loc[index-1, "STUDY_ID"] == current_id:
+                        last_med_action = [med_admin_df.loc[index-1, "MEDICATION_NAME"],
+                                           med_admin_df.loc[index-1, "MAR_ACTION"]]
+                        current_med_action = [med_admin_df.loc[index, "MEDICATION_NAME"],
+                                              med_admin_df.loc[index, "MAR_ACTION"]]
+                        if last_med_action != current_med_action:
+                            print("Error #2! Check: {}, time {}", row["STUDY_ID"],
+                                  row["TAKEN_HRS_FROM_ADMIT"])
+                except:
+                    pass
+            else:
+                success += 1
+                stop_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+                start_time = 0
 
 
 def clean_pin(df):
