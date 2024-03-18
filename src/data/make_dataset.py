@@ -32,6 +32,8 @@ def main():
     encoding("LABS", labs, ["COMPONENT_ID"])
     encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
+    process_meal_time(labs)
+
 
     for key in df_map.keys():
         write_to_csv(df_map[key], key)
@@ -66,6 +68,10 @@ def encoding(name,df,column_list):
 
         # Write DataFrame to CSV
         write_to_csv(df, name)
+
+def process_meal_time(df):
+    glucose_meter_index = df[df['EXTERNAL_NAME'] == "Glucose Meter"].index
+    print(glucose_meter_index)
 
 
 def clean_encounters(df):
