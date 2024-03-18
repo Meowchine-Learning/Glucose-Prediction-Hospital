@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime
 
 
 def main():
@@ -25,12 +26,12 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    encoding("ENCOUNTERS",encounters, ["SEX"])
-    encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
-    encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["COMPONENT_ID"])
-    encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
+    # encoding("ENCOUNTERS",encounters, ["SEX"])
+    # encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
+    # encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
+    # encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
+    # encoding("LABS", labs, ["COMPONENT_ID"])
+    # encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
     process_meal_time(labs)
 
@@ -70,16 +71,38 @@ def encoding(name,df,column_list):
         write_to_csv(df, name)
 
 def process_meal_time(df):
-    # Component id  = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     id_glucose_meter= [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # glucose_meter_index = df[df['COMPONENT_ID'] == id_glucose_meter].index
-    # Filter rows where component_id is [0, 0, 0, 1]
     print(type(df["COMPONENT_ID"]))
     print(type(df["COMPONENT_ID"][0]))
     print(df["COMPONENT_ID"][0])
-    # filtered_labs = df[df['COMPONENT_ID'].eq(id_glucose_meter).all(axis=1)]
+    filtered_labs = df[df['COMPONENT_ID'] == 885]
 
-    # print(filtered_labs)
+    # Breakfast: 8:00 AM - 9:30 AM. Lunch: 12:30 AM - 1:30 PM. Supper: 5:00 PM - 6:30 PM
+    # breakfast ∈ [7:00, 10:00], lunch ∈ [11:00, 14:00], supper ∈ [16:00, 19:00]
+
+    print(type(df["RESULT_TOD"][0]))
+
+
+    def classify_time(time):
+        breakfast_start = datetime.time(7, 0)
+        breakfast_end = datetime.time(10, 0)
+        lunch_start = datetime.time(11, 0)
+        lunch_end = datetime.time(14, 0)
+        supper_start = datetime.time(16, 0)
+        supper_end = datetime.time(19, 0)
+        
+        if breakfast_start <= time <= breakfast_end:
+            return "breakfast"
+        elif lunch_start <= time <= lunch_end:
+            return "lunch"
+        elif supper_start <= time <= supper_end:
+            return "supper"
+        else:
+            return "other"
+
+
+    print(filtered_labs)
 
 
 def clean_encounters(df):
