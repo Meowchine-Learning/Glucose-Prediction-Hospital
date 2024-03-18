@@ -25,14 +25,16 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    encoding("ENCOUNTERS",encounters, ["SEX"])
-    encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
-    encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["COMPONENT_ID"])
-    encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
-
     process_meal_time(labs)
+
+    # encoding("ENCOUNTERS",encounters, ["SEX"])
+    # encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
+    # encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
+    # encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
+    # encoding("LABS", labs, ["COMPONENT_ID"])
+    # encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
+
+    
 
 
     for key in df_map.keys():
@@ -70,10 +72,8 @@ def encoding(name,df,column_list):
         write_to_csv(df, name)
 
 def process_meal_time(df):
-    # Component id  = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     id_glucose_meter= [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # glucose_meter_index = df[df['COMPONENT_ID'] == id_glucose_meter].index
-    # Filter rows where component_id is [0, 0, 0, 1]
     print(type(df["COMPONENT_ID"]))
     print(type(df["COMPONENT_ID"][0]))
     print(df["COMPONENT_ID"][0])
