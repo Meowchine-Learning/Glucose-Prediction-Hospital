@@ -70,8 +70,16 @@ def encoding(name,df,column_list):
         write_to_csv(df, name)
 
 def process_meal_time(df):
-    glucose_meter_index = df[df['EXTERNAL_NAME'] == "Glucose Meter"].index
-    print(glucose_meter_index)
+    # Component id  = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    id_glucose_meter= [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # glucose_meter_index = df[df['COMPONENT_ID'] == id_glucose_meter].index
+    # Filter rows where component_id is [0, 0, 0, 1]
+    print(type(df["COMPONENT_ID"]))
+    print(type(df["COMPONENT_ID"][0]))
+    print(df["COMPONENT_ID"][0])
+    # filtered_labs = df[df['COMPONENT_ID'].eq(id_glucose_meter).all(axis=1)]
+
+    # print(filtered_labs)
 
 
 def clean_encounters(df):
