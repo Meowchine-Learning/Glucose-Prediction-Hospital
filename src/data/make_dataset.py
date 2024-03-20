@@ -325,7 +325,7 @@ def clean_med_admin(df):
     empty_vals = df[(df['SIG'].notnull()) == False].index
     df.drop(empty_vals, axis=0, inplace=True)
 
-    exclusion_ranges = IV_pump_times(df)
+    exclusion_ranges = find_IV_times(df)
 
     # drop columns
     df.drop(['MEDICATION_ID', 'MEDICATION_NAME', 'INFUSION_RATE',
@@ -334,11 +334,11 @@ def clean_med_admin(df):
     return exclusion_ranges
 
 
-def IV_pump_times(med_admin_df):
+def find_IV_times(med_admin_df):
 
     # IV insulins we want to exclude
     insulin_names = ["INSULIN REGULAR (HUMULIN R) 1 UNIT/ML (100 UNIT) IN NACL 0.9% 100 ML INFUSION BAG",
-                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)"]
+                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)", "INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN D5W 100 ML"]
 
     # dataframe with only rows with those meds
     insulin_df = med_admin_df[(med_admin_df['MEDICATION_NAME'] ==
@@ -346,8 +346,8 @@ def IV_pump_times(med_admin_df):
                                                     insulin_names[1])]
 
     # actions which can mean a new medication was started
-    start_actions = ["Restarted", "Continued from OR",
-                     "Continued from Pre-op", "Given", "New Bag", "Rate Change"]
+    start_continuous_actions = ["Restarted", "Continued from OR",
+                                "Continued from Pre-op", "Given", "New Bag", "Rate Change"]
 
     current_id = 0
     start_time = 0
@@ -365,30 +365,35 @@ def IV_pump_times(med_admin_df):
 
         action = row["MAR_ACTION"]
         # case 1: start action
-        if action in start_actions:
+        if action == "Given":   # Non-continouous case
+            start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+            stop_time = start_time + 1
+            exclusion_ranges[str(row["STUDY_ID"])+'_' +
+                             str(row["ENCOUNTER_NUM"])].append([start_time, stop_time])
+        if action in start_continuous_actions:
             if start_time == 0:  # ensures first administration, or given after a full start, stop cycle occured
                 start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
                 stop_time = -1
+                if row["MEDICATION_NAME"] == "INSULIN LISPRO (HUMALOG) IN NACL 0.9% 50 ML BAG (FLOOR)":
+                    stop_time = start_time + 1
         # case 2: stop action
         if action == "Stopped":
             if start_time == 0:  # error cases
                 try:
                     # if the last row patient ID is the same current patient ID
-                    if med_admin_df.loc[index-1, "STUDY_ID"] == current_id:
-                        if stop_time == 0:  # case a
-                            print("Error #1: Stopped right after admission. Check ID {}, at time {}".format(row["STUDY_ID"],
-                                  row["TAKEN_HRS_FROM_ADMIT"]))
-                        else:
-                            last_med_action = [med_admin_df.loc[index-1, "MEDICATION_NAME"],
-                                               med_admin_df.loc[index-1, "MAR_ACTION"]]
-                            current_med_action = [row["MEDICATION_NAME"],
-                                                  row["MAR_ACTION"]]
-                            if last_med_action != current_med_action:   # case b
-                                print("Error #2: Stopped medication but never started it or stopped medication twice not in a row. Check: {}, time {}".format(row["STUDY_ID"],
-                                                                                                                                                              row["TAKEN_HRS_FROM_ADMIT"]))
-                            else:   # case c
-                                print("Error #3: Stopped same medication twice in a row. Check ID {}, at time {}".format(row["STUDY_ID"],
-                                                                                                                         row["TAKEN_HRS_FROM_ADMIT"]))
+                    if stop_time == 0:  # case a
+                        start_time = 0
+                    else:
+                        last_med_action = [med_admin_df.loc[index-1, "MEDICATION_NAME"],
+                                           med_admin_df.loc[index-1, "MAR_ACTION"]]
+                        current_med_action = [row["MEDICATION_NAME"],
+                                              row["MAR_ACTION"]]
+                        if last_med_action != current_med_action:   # case b
+                            print("Error #2: Stopped medication but never started it or stopped medication twice not in a row. Check: {}, time {}".format(row["STUDY_ID"],
+                                                                                                                                                          row["TAKEN_HRS_FROM_ADMIT"]))
+                        else:   # case c
+                            print("Error #3: Stopped same medication twice in a row. Check ID {}, at time {}".format(row["STUDY_ID"],
+                                                                                                                     row["TAKEN_HRS_FROM_ADMIT"]))
                 except:
                     pass
             else:
