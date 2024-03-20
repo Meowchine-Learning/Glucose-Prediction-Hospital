@@ -83,7 +83,6 @@ def process_meal_time(df):
 
     print(type(df["RESULT_TOD"][0]))
 
-
     def classify_time(time):
         breakfast_start = datetime.time(7, 0)
         breakfast_end = datetime.time(10, 0)
@@ -100,9 +99,19 @@ def process_meal_time(df):
             return "supper"
         else:
             return "other"
-
-
+    
+    print(classify_time(df['RESULT_TOD'][24]))
+    print(type(filtered_labs))
+    # group by STUDY_ID, sort measurements by HRS_FROM_ADMIT
+    filtered_labs = filtered_labs.sort_values(by=['STUDY_ID', 'RESULT_HRS_FROM_ADMIT'])
+    # find the first meal time: breakfast, lunch or supper
+    
+    
+    # for row in filtered_labs:
+    filtered_labs['meal_time'] = filtered_labs['RESULT_TOD'].apply(classify_time)
     print(filtered_labs)
+    write_to_csv(filtered_labs, "LABS_GLUCOSE_MEAL_TIME")
+
 
 
 def clean_encounters(df):
