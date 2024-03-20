@@ -43,5 +43,3 @@ def lstm_data():
             y.append(label)
         current_index+=freq
     return np.array(X), np.array(y)
-
-X,y = lstm_data()

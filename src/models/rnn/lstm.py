@@ -23,32 +23,26 @@ from create_final_data import *
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating data for model:
 X,y = lstm_data()
+print(X.shape)
 X = tf.squeeze(X, axis=2) 
-print(X)
-val1 = 15582
-val2 = 24131
+print(X.shape)
+
+val1 = 7000
+val2 = 20000
 X_train, y_train = X[:val1],y[:val1]
 X_val, y_val = X[val1:val2],y[val1:val2]
 X_test, y_test = X[val2:],y[val2:]
-
-print()
-print("-----------------------------------")
-print("Checking shape:")
-print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape)
-print("-----------------------------------")
-print()
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating LSTM model:
 
 lstm_model = Sequential()
-lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = True))
-lstm_model.add(LSTM(32, activation='relu', return_sequences = False))
+lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2])))
 lstm_model.add(Dense(1, "linear"))
 
 lstm_model.summary()
 
 cp = ModelCheckpoint('models/rnn/models/lstm_model/', save_best_only = True)
-lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.0001), metrics = [RootMeanSquaredError()])
+lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.00001), metrics = [RootMeanSquaredError()])
 
 lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbacks=[cp])
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
