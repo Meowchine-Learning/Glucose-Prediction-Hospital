@@ -39,7 +39,7 @@ def lstm_data():
         for i in range(freq-window_size):
             row = [[a] for a in lstm_data[i+current_index:i+window_size+current_index]] #all data from window_size number of previous meals
             X.append(row)
-            label = lstm_data[i+window_size+current_index][5] #glucose level in the next meal
+            label = lstm_data[i+window_size+current_index][4] #glucose level in the next meal
             y.append(label)
         current_index+=freq
     return np.array(X), np.array(y)

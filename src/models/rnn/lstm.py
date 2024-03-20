@@ -4,6 +4,7 @@
 '''Math libraries: '''
 import pandas as pd
 import numpy as np
+import os
 
 '''Plotting libraries: '''
 import matplotlib.pyplot as plt
@@ -19,31 +20,59 @@ from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
 
 '''Local file'''
-from create_final_data import *
+# from create_final_data import *          #uncomment for main data
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#Creating data for model:
-X,y = lstm_data()
-print(X.shape)
-X = tf.squeeze(X, axis=2) 
-print(X.shape)
+# #Creating data for model:
+# X,y = lstm_data()                        #uncomment for main data
+# X = tf.squeeze(X, axis=2)                #uncomment for main data 
 
-val1 = 7000
-val2 = 20000
-X_train, y_train = X[:val1],y[:val1]
-X_val, y_val = X[val1:val2],y[val1:val2]
-X_test, y_test = X[val2:],y[val2:]
+#test data
+zip_path = tf.keras.utils.get_file(
+    origin='https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip',
+    fname='jena_climate_2009_2016.csv.zip',
+    extract=True)
+csv_path, _ = os.path.splitext(zip_path)
+df = pd.read_csv(csv_path)
+
+df.index = pd.to_datetime(df['Date Time'], format='%d.%m.%Y %H:%M:%S')
+temp = df['T (degC)']
+
+def df_to_X_y(df, window_size=5):
+  df_as_np = df.to_numpy()
+  X = []
+  y = []
+  for i in range(len(df_as_np)-window_size):
+    row = [[a] for a in df_as_np[i:i+window_size]]
+    X.append(row)
+    label = df_as_np[i+window_size]
+    y.append(label)
+  return np.array(X), np.array(y)
+
+WINDOW_SIZE = 5
+X1, y1 = df_to_X_y(temp, WINDOW_SIZE)
+X_train, y_train = X1[:60000], y1[:60000]
+X_val, y_val = X1[60000:65000], y1[60000:65000]
+X_test, y_test = X1[65000:], y1[65000:]
+
+
+# #creating data
+# val1 = 20000                #uncomment for main data
+# val2 = 27000                #uncomment for main data
+# X_train, y_train = X[:val1],y[:val1]                #uncomment for main data
+# X_val, y_val = X[val1:val2],y[val1:val2]                #uncomment for main data
+# X_test, y_test = X[val2:],y[val2:]                #uncomment for main data
+# print(X_train.shape)                #uncomment for main data
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating LSTM model:
 
 lstm_model = Sequential()
-lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2])))
+lstm_model.add(LSTM(32, activation='tanh', input_shape=(X_train.shape[1], X_train.shape[2])))
 lstm_model.add(Dense(1, "linear"))
 
 lstm_model.summary()
 
 cp = ModelCheckpoint('models/rnn/models/lstm_model/', save_best_only = True)
-lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.00001), metrics = [RootMeanSquaredError()])
-
+lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.0001), metrics = [RootMeanSquaredError()])
 lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbacks=[cp])
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Testing:
