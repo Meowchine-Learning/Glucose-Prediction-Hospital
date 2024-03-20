@@ -376,7 +376,7 @@ def IV_pump_times(med_admin_df):
                     # if the last row patient ID is the same current patient ID
                     if med_admin_df.loc[index-1, "STUDY_ID"] == current_id:
                         if stop_time == 0:  # case a
-                            print("Error #2: Stopped right after admission. Check ID {}, at time {}".format(row["STUDY_ID"],
+                            print("Error #1: Stopped right after admission. Check ID {}, at time {}".format(row["STUDY_ID"],
                                   row["TAKEN_HRS_FROM_ADMIT"]))
                         else:
                             last_med_action = [med_admin_df.loc[index-1, "MEDICATION_NAME"],
@@ -384,10 +384,10 @@ def IV_pump_times(med_admin_df):
                             current_med_action = [row["MEDICATION_NAME"],
                                                   row["MAR_ACTION"]]
                             if last_med_action != current_med_action:   # case b
-                                print("Error #3: Stopped medication but never started it or stopped medication twice not in a row. Check: {}, time {}".format(row["STUDY_ID"],
+                                print("Error #2: Stopped medication but never started it or stopped medication twice not in a row. Check: {}, time {}".format(row["STUDY_ID"],
                                                                                                                                                               row["TAKEN_HRS_FROM_ADMIT"]))
                             else:   # case c
-                                print("Error #4: Stopped same medication twice in a row. Check ID {}, at time {}".format(row["STUDY_ID"],
+                                print("Error #3: Stopped same medication twice in a row. Check ID {}, at time {}".format(row["STUDY_ID"],
                                                                                                                          row["TAKEN_HRS_FROM_ADMIT"]))
                 except:
                     pass
