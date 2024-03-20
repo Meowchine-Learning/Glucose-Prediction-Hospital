@@ -88,7 +88,7 @@ def TCN(device):
 
     combined_data = torch.cat((non_time_series_data, time_series_data), dim=2)
 
-    num_channels = [64, 128, 256]  # Example numbers of channels for each block
+    num_channels = [16,32,64]  # Example numbers of channels for each block
     num_non_time_series_features = 10
     num_time_series_features = 2
     total_features = num_non_time_series_features+num_time_series_features
