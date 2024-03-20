@@ -73,17 +73,15 @@ def encoding(name,df,column_list):
         write_to_csv(df, name)
 
 def process_meal_time(df):
-    id_glucose_meter= [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    # glucose_meter_index = df[df['COMPONENT_ID'] == id_glucose_meter].index
-    print(type(df["COMPONENT_ID"]))
-    print(type(df["COMPONENT_ID"][0]))
-    print(df["COMPONENT_ID"][0])
-    filtered_labs = df[df['COMPONENT_ID'] == 885]
+    # filter for glucose measurements
+    # 885 is the COMPONENT_ID for glucose
+    df.query('COMPONENT_ID == 885', inplace=True)
+    df.drop('COMPONENT_ID', axis=1, inplace=True)
+    # rename ORD_VALUE to GLUCOSE (mmol/L)
+    df.rename(columns={'ORD_VALUE': 'GLUCOSE (mmol/L)'}, inplace=True)
 
     # Breakfast: 8:00 AM - 9:30 AM. Lunch: 12:30 AM - 1:30 PM. Supper: 5:00 PM - 6:30 PM
     # breakfast ∈ [7:00, 10:00], lunch ∈ [11:00, 14:00], supper ∈ [16:00, 19:00]
-
-    print(type(df["RESULT_TOD"][0]))
 
     def classify_time(time):
         breakfast_start = datetime.time(7, 0)
@@ -102,18 +100,24 @@ def process_meal_time(df):
         else:
             return "other"
     
-    print(classify_time(df['RESULT_TOD'][24]))
-    print(type(filtered_labs))
     # group by STUDY_ID, sort measurements by HRS_FROM_ADMIT
-    filtered_labs = filtered_labs.sort_values(by=['STUDY_ID', 'RESULT_HRS_FROM_ADMIT'])
-    # find the first meal time: breakfast, lunch or supper
-    
+    df.sort_values(by=['STUDY_ID', 'RESULT_HRS_FROM_ADMIT'], inplace=True)
     
     # for row in filtered_labs:
-    filtered_labs['meal_time'] = filtered_labs['RESULT_TOD'].apply(classify_time)
-    print(filtered_labs)
-    write_to_csv(filtered_labs, "LABS_GLUCOSE_MEAL_TIME")
+    df['MEAL'] = df['RESULT_TOD'].apply(classify_time)
 
+    # only keep the last row in any close consecutive breakfast, lunch, or supper measurements
+    df.reset_index(drop=True, inplace=True)
+    for i in range(1, len(df)):
+        if df.at[i, 'STUDY_ID'] == df.at[i-1, 'STUDY_ID'] and \
+            df.at[i, 'MEAL'] == df.at[i-1, 'MEAL'] and \
+            df.at[i, 'RESULT_HRS_FROM_ADMIT'] - df.at[i-1, 'RESULT_HRS_FROM_ADMIT'] < 12: # also check that the hours from admit are not more than 12h apart to avoid classifying different days as the same meal
+                df.at[i-1, 'MEAL'] = "other"
+    # drop rows with MEAL == "other"
+    len_before = len(df)
+    df.query('MEAL != "other"', inplace=True)
+    print(f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
+    
         
 
 def clean_encounters(df):
