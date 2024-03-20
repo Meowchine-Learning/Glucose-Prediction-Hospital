@@ -16,11 +16,17 @@ def _dataInput_csv(filePath: str) -> list:
 def _dataOutput_json(DATA, dirPath: str = "src/features/output/") -> None:
     FEATURE_DATA = {}
     SEQUENCE_DATA = {}
+    ONEHOT_DICT = {
+        "Lab": set(),
+        "Med": set(),
+        "Nutri": set(),
+    }
     for ID in DATA.keys():
         DATAForCurrID = DATA[ID]
 
         # FEATURE DATASET:
         FEATURE_DATA[ID] = {}
+        FEATURE_DATA[ID]["HOSP_ADMIT_TOD"] = DATAForCurrID["HOSP_ADMIT_TOD"]
         FEATURE_DATA[ID]["WEIGHT_KG"] = DATAForCurrID["WEIGHT_KG"]
         FEATURE_DATA[ID]["HEIGHT_CM"] = DATAForCurrID["HEIGHT_CM"]
         FEATURE_DATA[ID]["AGE"] = DATAForCurrID["AGE"]
@@ -50,21 +56,24 @@ def _dataOutput_json(DATA, dirPath: str = "src/features/output/") -> None:
             temp[str(time)] = "ACTIVITY_STOP"
 
         for idx, time in enumerate(DATAForCurrID["ORDERS_NUTRITION_START_TIME"]):
-            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION_START_TIME"][idx])
+            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION"][idx])
             temp[str(time)] = f"NUTRITION_START_TYPE={NUTRITION_TYPE}"
         for idx, time in enumerate(DATAForCurrID["ORDERS_NUTRITION_STOP_TIME"]):
-            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION_START_TIME"][idx])
+            NUTRITION_TYPE = str(DATAForCurrID["ORDERS_NUTRITION"][idx])
             temp[str(time)] = f"NUTRITION_STOP_TYPE={NUTRITION_TYPE}"
+            ONEHOT_DICT["Nutri"].add(NUTRITION_TYPE)
 
         for idx, time in enumerate(DATAForCurrID["LAB_RESULT_HRS_FROM_ADMIT"]):
             LAB_TYPE = str(DATAForCurrID["LAB_COMPONENT_ID"][idx])
             LAB_RESULT = str(DATAForCurrID["LAB_ORD_VALUE"][idx])
-            temp[str(time)] = f"LAB_TYPE={LAB_TYPE}_RESULT={LAB_RESULT}"
+            temp[str(time)] = f"LAB_TYPE={LAB_TYPE}|RESULT={LAB_RESULT}"
+            ONEHOT_DICT["Lab"].add(LAB_TYPE)
 
         for idx, time in enumerate(DATAForCurrID["MEDICATION_TAKEN_HRS_FROM_ADMIT"]):
             MEDICATION_TYPE = str(DATAForCurrID["MEDICATION_ATC"][idx])
             MEDICATION_SIG = str(DATAForCurrID["MEDICATION_SIG"][idx])
-            temp[str(time)] = f"MEDICATION_TYPE={MEDICATION_TYPE}_SIG={MEDICATION_SIG}"
+            temp[str(time)] = f"MEDICATION_TYPE={MEDICATION_TYPE}|SIG={MEDICATION_SIG}"
+            ONEHOT_DICT["Med"].add(MEDICATION_TYPE)
 
         temp[str(DATAForCurrID["HOSP_DISCHRG_HRS_FROM_ADMIT"])] = "END"
 
@@ -96,6 +105,11 @@ def _dataOutput_json(DATA, dirPath: str = "src/features/output/") -> None:
     # Overall DATASET:
     with open(dirPath + '/DATA.json', mode='w') as file:
         json.dump(DATA, file, indent=4)
+    
+    for key, value in ONEHOT_DICT.items():
+        ONEHOT_DICT[key] = list(value)
+    with open(dirPath + '/ONEHOT_DICT.json', 'w') as json_file:
+        json.dump(ONEHOT_DICT, json_file, indent=4)
 
 def _getTableColumn(data: list, index: int) -> list:
     return [row[index] for row in data if len(row) > index]
@@ -107,6 +121,7 @@ def _initiateIDCase(DATA, ID):
     DATA[ID] = {}
     DATA[ID]["HOSP_ADMIT_TIME"] = 0.0
     DATA[ID]["HOSP_DISCHRG_HRS_FROM_ADMIT"] = None
+    DATA[ID]["HOSP_ADMIT_TOD"] = None
 
     # TABLE 02
     DATA[ID]["WEIGHT_KG"] = None
@@ -151,6 +166,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
 
     STUDY_ID = _getTableColumn(data_01_ENCOUNTERS, 0)
     ENCOUNTER_NUM = _getTableColumn(data_01_ENCOUNTERS, 1)
+    HOSP_ADMIT_TOD = _getTableColumn(data_01_ENCOUNTERS, 2)
     HOSP_DISCHRG_HRS_FROM_ADMIT = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 4)))
     HOSP_DISCHRG_HRS_FROM_ADMIT = [round(time, 4) for time in HOSP_DISCHRG_HRS_FROM_ADMIT]
     WEIGHT_KG = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 5)))
@@ -164,6 +180,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
         ID = str(STUDY_ID[idx] + ENCOUNTER_NUM[idx])
         _initiateIDCase(DATA, ID)
         DATA[ID]["HOSP_DISCHRG_HRS_FROM_ADMIT"] = HOSP_DISCHRG_HRS_FROM_ADMIT[idx]
+        DATA[ID]["HOSP_ADMIT_TOD"] = int(HOSP_ADMIT_TOD[idx].split(":")[0]) + int(HOSP_ADMIT_TOD[idx].split(":")[1])/60
         DATA[ID]["WEIGHT_KG"] = WEIGHT_KG[idx]
         DATA[ID]["HEIGHT_CM"] = HEIGHT_CM[idx]
         DATA[ID]["AGE"] = AGE[idx]
