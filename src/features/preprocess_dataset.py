@@ -15,11 +15,11 @@ def _dataInput_csv(filePath: str) -> list:
     return IN
 
 
-def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
+def _dataOutput_json(DATA, dirPath: str = "src/features/output") -> None:
     FEATURE_DATA = {}
     SEQUENCE_DATA = {}
     ONEHOT_DICT = {
-        "Lab": set(),
+        "Lab": [],
         "Med": set(),
         "Nutri": set(),
     }
@@ -69,7 +69,7 @@ def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
             LAB_TYPE = str(DATAForCurrID["LAB_COMPONENT_ID"][idx])
             LAB_RESULT = str(DATAForCurrID["LAB_ORD_VALUE"][idx])
             temp[str(time)] = f"LAB_TYPE={LAB_TYPE}|RESULT={LAB_RESULT}"
-            ONEHOT_DICT["Lab"].add(LAB_TYPE)
+            ONEHOT_DICT["Lab"].append(LAB_TYPE)
 
         for idx, time in enumerate(DATAForCurrID["MEDICATION_TAKEN_HRS_FROM_ADMIT"]):
             MEDICATION_TYPE = str(DATAForCurrID["MEDICATION_ATC"][idx])
@@ -107,6 +107,13 @@ def _dataOutput_json(DATA, dirPath: str = "output/") -> None:
     # Overall DATASET:
     with open(dirPath + '/DATA.json', mode='w') as file:
         json.dump(DATA, file, indent=4)
+    
+    count_dict = {}
+    for item in ONEHOT_DICT["Lab"]:
+        count_dict[item] = count_dict.get(item, 0) + 1
+    filtered_dict = {key: value for key, value in count_dict.items() if value > 10}
+    print(filtered_dict)
+    ONEHOT_DICT["Lab"] = list(filtered_dict.keys())
     
     for key, value in ONEHOT_DICT.items():
         ONEHOT_DICT[key] = list(value)
@@ -400,7 +407,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
 
     # Create Encoders
     if toReload_ACTIONS_d2vModel:
-        ACTIONS_d2vModel = Doc2Vec.load("encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel = Doc2Vec.load("src/features/encoders/ACTIONS_d2vModel.pkl")
     else:
         ACTIONS_Documents = []
         for ID in DATA.keys():
@@ -411,10 +418,10 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                    window=6,
                                    min_count=1,
                                    workers=10)
-        ACTIONS_d2vModel.save("encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel.save("src/features/encoders/ACTIONS_d2vModel.pkl")
 
     if toReload_DRUGS_d2vModel:
-        DRUGS_d2vModel = Doc2Vec.load("encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel = Doc2Vec.load("src/features/encoders/DRUGS_d2vModel.pkl")
     else:
         DRUGS_Documents = []
         for ID in DATA.keys():
@@ -427,7 +434,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                  window=6,
                                  min_count=1,
                                  workers=10)
-        DRUGS_d2vModel.save("encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel.save("src/features/encoders/DRUGS_d2vModel.pkl")
 
     # Encoding Processes:
     for idx, value in enumerate(STUDY_ID_10):
