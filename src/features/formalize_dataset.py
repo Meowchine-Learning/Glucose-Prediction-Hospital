@@ -1,3 +1,4 @@
+import csv
 import json
 import math
 
@@ -7,9 +8,53 @@ def _dataInput_json(path) -> dict:
         return json.load(f)
 
 
-def _dataOutput_json(DATA):
-    with open("/output/DATASET.json", mode='w') as file:
+def _dataOutput_json(DATA, outputPath="/output/FormalizedDATA.json"):
+    with open(outputPath, mode='w') as file:
         json.dump(DATA, file, indent=4)
+
+
+def _dataOutput_csv(DATA, outputPath="/output/FormalizedDATA.csv"):
+    FEATURES = [
+        "UniqueSampleID",
+        "LabTests",
+        "#Day",
+        "#Time",
+        "Med",
+        "Activity",
+        "Nutrition",
+        "Weight",
+        "Height",
+        "Age",
+        "Sex",
+        "Operations",
+        "MedActs",
+        "Diseases",
+        "PriorMed"
+    ]
+
+    with open(outputPath, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(FEATURES)
+
+        for uniqueSampleID in sorted(DATA.keys()):
+            dataline = [
+                uniqueSampleID,
+                DATA[uniqueSampleID].get(FEATURES[1], ""),
+                DATA[uniqueSampleID].get(FEATURES[2], ""),
+                DATA[uniqueSampleID].get(FEATURES[3], ""),
+                DATA[uniqueSampleID].get(FEATURES[4], ""),
+                DATA[uniqueSampleID].get(FEATURES[5], ""),
+                DATA[uniqueSampleID].get(FEATURES[6], ""),
+                DATA[uniqueSampleID].get(FEATURES[7], ""),
+                DATA[uniqueSampleID].get(FEATURES[8], ""),
+                DATA[uniqueSampleID].get(FEATURES[9], ""),
+                DATA[uniqueSampleID].get(FEATURES[10], ""),
+                DATA[uniqueSampleID].get(FEATURES[11], ""),
+                DATA[uniqueSampleID].get(FEATURES[12], ""),
+                DATA[uniqueSampleID].get(FEATURES[13], ""),
+                DATA[uniqueSampleID].get(FEATURES[14], "")
+            ]
+            writer.writerow(dataline)
 
 
 def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
@@ -24,12 +69,10 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
             break
         RTimeMax = math.ceil(max(sequences)) + 1
         for RTime in range(RTimeMax):
-            # Compute Time Slots:
             dayNum = (ATime + RTime) // 24
             dayTime = (ATime + RTime) % 24
             uniqueSampleID = f"{sampleKey}|{str(dayNum)}|{str(dayTime)}"
 
-            # Initialize Time Windows:
             DATA[uniqueSampleID] = {}
             DATA[uniqueSampleID]["#Day"] = dayNum
             DATA[uniqueSampleID]["#Time"] = dayTime
@@ -77,7 +120,8 @@ def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
     DATA = formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA)
     DATA = formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA)
 
-    #_dataOutput_json(FORMAL_DATA)
+    # _dataOutput_json(DATA, outputPath="/output/FormalizedDATA.json")
+    # _dataOutput_csv(DATA, outputPath="/output/FormalizedDATA.csv")
 
 
 if __name__ == '__main__':
