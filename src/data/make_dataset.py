@@ -159,7 +159,7 @@ def clean_admit(df):
              "Pump thrombosis": "T82.9",
              "Bacteremia/Mitral Vegetation": "I05.9",
              "Penetrating Ulcer - Distal Aortic Arch": "I70.0",
-             "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
+             r"EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
              "liver biopsy VAD patient": "Z95", "VAD patient for generator change Monday": "Z45.00,Z95", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9", "VAD work- up": "Z13.6", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9"
              }
 
