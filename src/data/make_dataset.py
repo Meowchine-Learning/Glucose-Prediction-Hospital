@@ -338,7 +338,7 @@ def find_IV_times(med_admin_df):
 
     # IV insulins we want to exclude
     insulin_names = ["INSULIN REGULAR (HUMULIN R) 1 UNIT/ML (100 UNIT) IN NACL 0.9% 100 ML INFUSION BAG",
-                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)", "INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN D5W 100 ML"]
+                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)", "INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN D5W 100 ML", "INSULIN LISPRO (HUMALOG) IN NACL 0.9% 50 ML BAG (FLOOR)"]
 
     # dataframe with only rows with those meds
     insulin_df = med_admin_df[(med_admin_df['MEDICATION_NAME'] ==
@@ -349,58 +349,44 @@ def find_IV_times(med_admin_df):
     start_continuous_actions = ["Restarted", "Continued from OR",
                                 "Continued from Pre-op", "Given", "New Bag", "Rate Change"]
 
-    current_id = 0
-    start_time = 0
-    stop_time = 0
-    encounter_num = 0
+    start_time, stop_time = 0, 0
     exclusion_ranges = {}
-    for index, row in insulin_df.iterrows():
+    start_med = ""
+    id = ""
+    for _, row in insulin_df.iterrows():
         # if the ID or encounter number changes, reset
-        if (current_id != int(row["STUDY_ID"])) or (encounter_num != int(row["ENCOUNTER_NUM"])):
+        if id != str(row["STUDY_ID"])+'_'+str(row["ENCOUNTER_NUM"]):
+            id = str(row["STUDY_ID"])+'_'+str(row["ENCOUNTER_NUM"])
             start_time, stop_time = 0, 0
-            current_id = int(row["STUDY_ID"])
-            encounter_num = int(row["ENCOUNTER_NUM"])
-            exclusion_ranges[str(row["STUDY_ID"])+'_' +
-                             str(row["ENCOUNTER_NUM"])] = []
+            exclusion_ranges[id] = []
 
         action = row["MAR_ACTION"]
+        start_med = row["MEDICATION_NAME"]
         # case 1: start action
         if action == "Given":   # Non-continouous case
             start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
             stop_time = start_time + 1
-            exclusion_ranges[str(row["STUDY_ID"])+'_' +
-                             str(row["ENCOUNTER_NUM"])].append([start_time, stop_time])
+            exclusion_ranges[id].append([start_time, stop_time])
         if action in start_continuous_actions:
             if start_time == 0:  # ensures first administration, or given after a full start, stop cycle occured
                 start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
                 stop_time = -1
-                if row["MEDICATION_NAME"] == "INSULIN LISPRO (HUMALOG) IN NACL 0.9% 50 ML BAG (FLOOR)":
+                if start_med == insulin_names[-1]:
                     stop_time = start_time + 1
         # case 2: stop action
         if action == "Stopped":
             if start_time == 0:  # error cases
                 try:
-                    # if the last row patient ID is the same current patient ID
-                    if stop_time == 0:  # case a
+                    if stop_time == 0:  # case a: "Stopped" after admission, before any starts
                         start_time = 0
-                    else:
-                        last_med_action = [med_admin_df.loc[index-1, "MEDICATION_NAME"],
-                                           med_admin_df.loc[index-1, "MAR_ACTION"]]
-                        current_med_action = [row["MEDICATION_NAME"],
-                                              row["MAR_ACTION"]]
-                        if last_med_action != current_med_action:   # case b
-                            print("Error #2: Stopped medication but never started it or stopped medication twice not in a row. Check: {}, time {}".format(row["STUDY_ID"],
-                                                                                                                                                          row["TAKEN_HRS_FROM_ADMIT"]))
-                        else:   # case c
-                            print("Error #3: Stopped same medication twice in a row. Check ID {}, at time {}".format(row["STUDY_ID"],
-                                                                                                                     row["TAKEN_HRS_FROM_ADMIT"]))
+                    else:               # case b: else
+                        start_time = exclusion_ranges[id][-1][1]
+                        exclusion_ranges.pop()
                 except:
                     pass
-            else:
-                stop_time = float(row["TAKEN_HRS_FROM_ADMIT"])
-                exclusion_ranges[str(row["STUDY_ID"])+'_' +
-                                 str(row["ENCOUNTER_NUM"])].append([start_time, stop_time])
-                start_time = 0
+            stop_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+            exclusion_ranges[id].append([start_med, start_time, stop_time])
+            start_time = 0
     return exclusion_ranges
 
 
@@ -408,7 +394,7 @@ def is_within_exclusion_range(row, col, exclusion_ranges):
     key = str(row['STUDY_ID'])+'_'+str(row['ENCOUNTER_NUM'])
     time = row[col]
     if key in exclusion_ranges:
-        for start_time, stop_time in exclusion_ranges[key]:
+        for _, start_time, stop_time in exclusion_ranges[key]:
             if start_time <= time <= stop_time:
                 return False  # Exclude this row
     return True  # Keep this row
