@@ -2,6 +2,7 @@ import csv
 import json
 import math
 import numpy as np
+from ast import literal_eval
 
 
 def _dataInput_json(inputPath) -> dict:
@@ -42,7 +43,7 @@ def _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv"):
         writer.writerow(FEATURES)
 
         for uniqueSampleID in sorted(DATA.keys()):
-            dataline = [
+            dataline = [  # 1, 4, 6, 11, 12, 13, 14
                 uniqueSampleID,
                 DATA[uniqueSampleID].get(FEATURES[1], ""),
                 DATA[uniqueSampleID].get(FEATURES[2], ""),
@@ -60,6 +61,57 @@ def _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv"):
                 DATA[uniqueSampleID].get(FEATURES[14], "")
             ]
             writer.writerow(dataline)
+    print(f"\t> Formalized Data printed to {outputPath}...")
+
+
+def _dataOutput_npy(DATA, outputPath="output/FormalizedDATA.npy"):
+    print("\n>> Printing Formalized Data to NPY...")
+    FEATURES = [
+        "UniqueSampleID",
+        "LabTests",
+        "#Day",
+        "#Time",
+        "Med",
+        "Activity",
+        "Nutrition",
+        "Weight",
+        "Height",
+        "Age",
+        "Sex",
+        "Operations",
+        "MedActs",
+        "Diseases",
+        "PriorMed"
+    ]
+
+    DATAMATRIX = []
+    for uniqueSampleID in sorted(DATA.keys()):
+        # 1, 4, 6, 11, 12, 13, 14
+        DATALINE = [
+            uniqueSampleID,
+            *DATA[uniqueSampleID].get(FEATURES[1]),
+            DATA[uniqueSampleID].get(FEATURES[2]),
+            DATA[uniqueSampleID].get(FEATURES[3]),
+            *DATA[uniqueSampleID].get(FEATURES[4]),
+            DATA[uniqueSampleID].get(FEATURES[5]),
+            *DATA[uniqueSampleID].get(FEATURES[6]),
+            DATA[uniqueSampleID].get(FEATURES[7]),
+            DATA[uniqueSampleID].get(FEATURES[8]),
+            DATA[uniqueSampleID].get(FEATURES[9]),
+            DATA[uniqueSampleID].get(FEATURES[10]),
+            *DATA[uniqueSampleID].get(FEATURES[11]),
+            *DATA[uniqueSampleID].get(FEATURES[12]),
+            *DATA[uniqueSampleID].get(FEATURES[13]),
+            *DATA[uniqueSampleID].get(FEATURES[14])
+        ]
+        print(f"Array at index {uniqueSampleID} has shape: {len(DATALINE)}")
+
+        dataline = [np.array([x]) if np.isscalar(x) else x for x in DATALINE]
+        DATAMATRIX.append(dataline)
+    check = 0
+
+    #DATAMATRIX = np.vstack(DATAMATRIX)
+    np.save('FormalizedDATA.npy', np.array(DATAMATRIX))
     print(f"\t> Formalized Data printed to {outputPath}...")
 
 
@@ -106,17 +158,20 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
                 DATA[uniqueSampleID]["Activity"] = 1
             elif action.split("=")[0] == "NUTRITION_STOP_TYPE":
                 # Nutrition
-                idxNutriDict = ONEHOT_DICT["Nutri"].index(action.split("=")[1]) # find the index of this nutrition 
-                DATA[uniqueSampleID]["Nutrition"][idxNutriDict] = 1 # assign the nutrition onehot
+                idxNutriDict = ONEHOT_DICT["Nutri"].index(action.split("=")[1])  # find the index of this nutrition
+                DATA[uniqueSampleID]["Nutrition"][idxNutriDict] = 1  # assign the nutrition onehot
             elif action.split("|")[0].split("=")[0] == "LAB_TYPE":
                 # LabTests
-                idxLabDict = ONEHOT_DICT["Lab"].index(action.split("|")[0].split("=")[1]) # find the index of this Lab, 
-                DATA[uniqueSampleID]["LabTests"][idxLabDict] = float(action.split("|")[1].split("=")[1]) # and assign the corresponding result
+                idxLabDict = ONEHOT_DICT["Lab"].index(
+                    action.split("|")[0].split("=")[1])  # find the index of this Lab,
+                DATA[uniqueSampleID]["LabTests"][idxLabDict] = float(
+                    action.split("|")[1].split("=")[1])  # and assign the corresponding result
             elif action.split("|")[0].split("=")[0] == "MEDICATION_TYPE":
                 # Med
-                idxMedDict = ONEHOT_DICT["Med"].index(action.split("|")[0].split("=")[1]) # find the index of this Med
-                DATA[uniqueSampleID]["Med"][idxMedDict] = float(action.split("|")[1].split("=")[1]) # and assign the corresponding sig
-        
+                idxMedDict = ONEHOT_DICT["Med"].index(action.split("|")[0].split("=")[1])  # find the index of this Med
+                DATA[uniqueSampleID]["Med"][idxMedDict] = float(
+                    action.split("|")[1].split("=")[1])  # and assign the corresponding sig
+
         for RTime in range(1, RTimeMax):
             prDayNum = (ATime + RTime - 1) // 24
             prDayTime = (ATime + RTime - 1) % 24
@@ -160,8 +215,9 @@ def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
     DATA = formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA)
     DATA = formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA)
 
-    _dataOutput_json(DATA, outputPath="output/FormalizedDATA.json")
-    _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv")
+    # _dataOutput_json(DATA, outputPath="output/FormalizedDATA.json")
+    #_dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv")
+    _dataOutput_npy(DATA)
 
 
 if __name__ == '__main__':

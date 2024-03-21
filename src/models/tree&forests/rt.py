@@ -1,9 +1,30 @@
 import csv
+import json
+
+import pandas as pd
 from ast import literal_eval
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
+
+FEATURES = [
+    "UniqueSampleID",
+    "LabTests",
+    "#Day",
+    "#Time",
+    "Med",
+    "Activity",
+    "Nutrition",
+    "Weight",
+    "Height",
+    "Age",
+    "Sex",
+    "Operations",
+    "MedActs",
+    "Diseases",
+    "PriorMed"
+]
 
 
 def _dataInput_csv(inputPath="../../features/output/FormalizedDATA.csv"):
@@ -28,14 +49,38 @@ def _dataInput_csv(inputPath="../../features/output/FormalizedDATA.csv"):
             y_value = row[y_col_idx]
             if y_value.startswith('[') and y_value.endswith(']'):
                 y.append(literal_eval(y_value))
-            else:
-                y.append(y_value)
 
+    return X, y
+
+
+def _dataInput_json(inputPath="../../features/output/FormalizedDATA.json"):
+    print(f"\n>> Got Preprocessed Data from {inputPath}.")
+    with open(inputPath, 'r') as f:
+        INPUT = json.load(f)
+        X, y = [], []
+        for uniqueSampleID in INPUT.keys():
+            X.append([
+                INPUT[uniqueSampleID][FEATURES[2]],
+                INPUT[uniqueSampleID][FEATURES[3]],
+                INPUT[uniqueSampleID][FEATURES[4]],
+                INPUT[uniqueSampleID][FEATURES[5]],
+                INPUT[uniqueSampleID][FEATURES[6]],
+                INPUT[uniqueSampleID][FEATURES[7]],
+                INPUT[uniqueSampleID][FEATURES[8]],
+                INPUT[uniqueSampleID][FEATURES[9]],
+                INPUT[uniqueSampleID][FEATURES[10]],
+                INPUT[uniqueSampleID][FEATURES[11]],
+                INPUT[uniqueSampleID][FEATURES[12]],
+                INPUT[uniqueSampleID][FEATURES[13]],
+                INPUT[uniqueSampleID][FEATURES[14]]
+            ])
+            y.append(map(float, INPUT[uniqueSampleID][FEATURES[1]].split("_")))
     return X, y
 
 
 if __name__ == '__main__':
     X, y = _dataInput_csv()
+    #X, y = _dataInput_json()
 
     training_window_size = 250
     evaluation_window_size = 1
