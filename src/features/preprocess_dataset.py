@@ -1,5 +1,7 @@
 import csv
 import json
+from copy import deepcopy
+
 import numpy as np
 import nltk
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
@@ -439,7 +441,11 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
         DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"] = DRUGS_d2vModel.infer_vector(list(map(str, DATA[ID]["PRIOR_MEDICATION_ATC_ENCODED"]))).tolist()
     print("√ 12_PIN")
 
-    return DATA
+    DATAFixed = deepcopy(DATA)
+    for sampleID in DATA.keys():
+        if (not DATA[sampleID]['PRIOR_MEDICATION_ATC_ENCODED']) or (not DATA[sampleID]['MEDICATION_ATC']) or (not DATA[sampleID]['MEDICATION_ATC_ENCODED'] or (not DATA[sampleID]['MEDICATION_ACTIONS_ENCODED'])):
+            del DATAFixed[sampleID]
+    return DATAFixed
 
 
 def preprocess_11_MEDICATION_ORDERS(DATA, filePath_11_MEDICATION_ORDERS) -> dict:
@@ -481,8 +487,7 @@ def preprocessData() -> dict:
     # 09_LABS
     DATA = preprocess_09_LABS(DATA, filePath_09_LABS)
     # 10_MEDICATION_ADMINISTRATIONS & 12_PIN
-    DATA = preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS,
-                                                               filePath_12_PIN)
+    DATA = preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICATION_ADMINISTRATIONS, filePath_12_PIN)
     # 11_MEDICATION_ORDERS              # todo: almost same to table 10, currently ignored;
     DATA = preprocess_11_MEDICATION_ORDERS(DATA, filePath_11_MEDICATION_ORDERS)
 

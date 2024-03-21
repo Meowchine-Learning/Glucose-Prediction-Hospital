@@ -106,12 +106,11 @@ def _dataOutput_npy(DATA, outputPath="output/FormalizedDATA.npy"):
         ]
         print(f"Array at index {uniqueSampleID} has shape: {len(DATALINE)}")
 
-        dataline = [np.array([x]) if np.isscalar(x) else x for x in DATALINE]
+        dataline = [x if np.isscalar(x) else x for x in DATALINE]
         DATAMATRIX.append(dataline)
-    check = 0
 
     #DATAMATRIX = np.vstack(DATAMATRIX)
-    np.save('FormalizedDATA.npy', np.array(DATAMATRIX))
+    np.save(outputPath, np.array(DATAMATRIX))
     print(f"\t> Formalized Data printed to {outputPath}...")
 
 
