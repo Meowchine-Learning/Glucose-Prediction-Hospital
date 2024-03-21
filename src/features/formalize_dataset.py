@@ -3,17 +3,21 @@ import json
 import math
 
 
-def _dataInput_json(path) -> dict:
-    with open(path, 'r') as f:
+def _dataInput_json(inputPath) -> dict:
+    print(f"\n>> Got Preprocessed Data from {inputPath}.")
+    with open(inputPath, 'r') as f:
         return json.load(f)
 
 
-def _dataOutput_json(DATA, outputPath="/output/FormalizedDATA.json"):
+def _dataOutput_json(DATA, outputPath="output/FormalizedDATA.json"):
+    print("\n>> Printing Formalized Data to JSON...")
     with open(outputPath, mode='w') as file:
         json.dump(DATA, file, indent=4)
+    print(f"\t> Formalized Data printed to {outputPath}...")
 
 
-def _dataOutput_csv(DATA, outputPath="/output/FormalizedDATA.csv"):
+def _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv"):
+    print("\n>> Printing Formalized Data to CSV...")
     FEATURES = [
         "UniqueSampleID",
         "LabTests",
@@ -55,11 +59,12 @@ def _dataOutput_csv(DATA, outputPath="/output/FormalizedDATA.csv"):
                 DATA[uniqueSampleID].get(FEATURES[14], "")
             ]
             writer.writerow(dataline)
+    print(f"\t> Formalized Data printed to {outputPath}...")
 
 
 def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
+    print("\n>> Formalizing Sequence Data...")
     for sampleKey in SEQUENCE_DATA.keys():
-        print(sampleKey)
         sequences = SEQUENCE_DATA[sampleKey]["SEQUENCE"]
         actions = SEQUENCE_DATA[sampleKey]["ACTIONS"]
 
@@ -89,11 +94,13 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
                 action_dayTime = time % 24
                 uniqueSampleID = f"{sampleKey}|{str(action_dayNum)}|{str(action_dayTime)}"
                 DATA[uniqueSampleID]["Activity"] = 1
-    test = 0
+
+    print("\t> Sequence Data Formalized.")
     return DATA
 
 
 def formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA):
+    print("\n>> Formalizing Feature Data...")
     for uniqueSampleID in DATA.keys():
         sampleKey = uniqueSampleID.split('|')[0]
         DATA[uniqueSampleID]["Weight"] = math.ceil(FEATURE_DATA[sampleKey]["WEIGHT_KG"])
@@ -106,7 +113,7 @@ def formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA):
         DATA[uniqueSampleID]["Diseases"] = FEATURE_DATA[sampleKey]["DISEASES"]
         DATA[uniqueSampleID]["PriorMed"] = FEATURE_DATA[sampleKey]["PRIOR_MEDICATION_ATC_ENCODED"]
 
-    test = 1
+    print("\t> Feature Data Formalized.")
     return DATA
 
 
@@ -120,8 +127,8 @@ def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
     DATA = formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA)
     DATA = formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA)
 
-    # _dataOutput_json(DATA, outputPath="/output/FormalizedDATA.json")
-    # _dataOutput_csv(DATA, outputPath="/output/FormalizedDATA.csv")
+    _dataOutput_json(DATA, outputPath="output/FormalizedDATA.json")
+    _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv")
 
 
 if __name__ == '__main__':
