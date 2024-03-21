@@ -2,7 +2,7 @@ import csv
 import json
 import math
 import numpy as np
-from ast import literal_eval
+from copy import deepcopy
 
 
 def _dataInput_json(inputPath) -> dict:
@@ -104,12 +104,11 @@ def _dataOutput_npy(DATA, outputPath="output/FormalizedDATA.npy"):
             *DATA[uniqueSampleID].get(FEATURES[13]),
             *DATA[uniqueSampleID].get(FEATURES[14])
         ]
-        print(f"Array at index {uniqueSampleID} has shape: {len(DATALINE)}")
+        print(f"Array at index {uniqueSampleID} has shape: {len(DATALINE)}, size={len(DATA[uniqueSampleID].get(FEATURES[1]))}")
 
         dataline = [x if np.isscalar(x) else x for x in DATALINE]
         DATAMATRIX.append(dataline)
 
-    #DATAMATRIX = np.vstack(DATAMATRIX)
     np.save(outputPath, np.array(DATAMATRIX))
     print(f"\t> Formalized Data printed to {outputPath}...")
 
@@ -204,6 +203,14 @@ def formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA):
     return DATA
 
 
+def pruneData(DATA):
+    DATA_pruned = deepcopy(DATA)
+    for uniqueSampleID in DATA.keys():
+        if DATA[uniqueSampleID]["#Time"] < 7:
+            del DATA_pruned[uniqueSampleID]
+    return DATA_pruned
+
+
 def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
     """ Input Preprocessed data """
     FEATURE_DATA = _dataInput_json(FEATURE_DATA_FilePath)
@@ -213,6 +220,7 @@ def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
     DATA = {}
     DATA = formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA)
     DATA = formalizeFeatureData(DATA, FEATURE_DATA, SEQUENCE_DATA)
+    DATA = pruneData(DATA)
 
     # _dataOutput_json(DATA, outputPath="output/FormalizedDATA.json")
     #_dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv")
