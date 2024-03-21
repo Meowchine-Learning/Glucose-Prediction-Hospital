@@ -1,6 +1,7 @@
 import csv
 import json
 import math
+import numpy as np
 
 
 def _dataInput_json(inputPath) -> dict:
@@ -64,6 +65,12 @@ def _dataOutput_csv(DATA, outputPath="output/FormalizedDATA.csv"):
 
 def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
     print("\n>> Formalizing Sequence Data...")
+
+    ONEHOT_DICT = _dataInput_json("output/ONEHOT_DICT.json")
+    lab_num = len(ONEHOT_DICT["Lab"])
+    med_num = len(ONEHOT_DICT["Med"])
+    nutri_num = len(ONEHOT_DICT["Nutri"])
+
     for sampleKey in SEQUENCE_DATA.keys():
         sequences = SEQUENCE_DATA[sampleKey]["SEQUENCE"]
         actions = SEQUENCE_DATA[sampleKey]["ACTIONS"]
@@ -82,18 +89,34 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
             DATA[uniqueSampleID]["#Day"] = dayNum
             DATA[uniqueSampleID]["#Time"] = dayTime
             DATA[uniqueSampleID]["Activity"] = 0
+            DATA[uniqueSampleID]["LabTests"] = list(np.zeros(lab_num))
+            DATA[uniqueSampleID]["Med"] = list(np.zeros(med_num))
+            DATA[uniqueSampleID]["Nutrition"] = list(np.zeros(nutri_num))
 
         for idx, sequence in enumerate(sequences):
             action = actions[idx]
             action_RTime = sequences[idx]
             if action_RTime >= RTimeMax:
                 break
-            if action == 'ACTIVITY_STOP':
+            elif action == 'ACTIVITY_STOP':
                 time = math.ceil(ATime + action_RTime)
                 action_dayNum = time // 24
                 action_dayTime = time % 24
                 uniqueSampleID = f"{sampleKey}|{str(action_dayNum)}|{str(action_dayTime)}"
                 DATA[uniqueSampleID]["Activity"] = 1
+            elif action.split("=")[0] == "NUTRITION_STOP_TYPE":
+                # Nutrition
+                idxNutriDict = ONEHOT_DICT["Nutri"].index(action.split("=")[1]) # find the index of this nutrition 
+                DATA[uniqueSampleID]["Nutrition"][idxNutriDict] = 1 # assign the nutrition onehot
+            elif action.split("|")[0].split("=")[0] == "LAB_TYPE":
+                # LabTests
+                idxLabDict = ONEHOT_DICT["Lab"].index(action.split("|")[0].split("=")[1]) # find the index of this Lab, 
+                DATA[uniqueSampleID]["LabTests"][idxLabDict] = float(action.split("|")[1].split("=")[1]) # and assign the corresponding result
+            elif action.split("|")[0].split("=")[0] == "MEDICATION_TYPE":
+                # Med
+                idxMedDict = ONEHOT_DICT["Med"].index(action.split("|")[0].split("=")[1]) # find the index of this Med
+                DATA[uniqueSampleID]["Med"][idxMedDict] = float(action.split("|")[1].split("=")[1]) # and assign the corresponding sig
+            
 
     print("\t> Sequence Data Formalized.")
     return DATA
@@ -134,5 +157,5 @@ def generateDataset(FEATURE_DATA_FilePath, SEQUENCE_DATA_FilePath):
 if __name__ == '__main__':
     generateDataset(
         FEATURE_DATA_FilePath := "output/FEATURE_DATA.json",
-        SEQUENCE_DATA_FilePath := "output/SEQUENCE_DATA.json"
+        SEQUENCE_DATA_FilePath := "output/SEQUENCE_DATA.json",
     )
