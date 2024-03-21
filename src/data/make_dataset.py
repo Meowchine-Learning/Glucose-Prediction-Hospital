@@ -53,7 +53,7 @@ def main():
     encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
     encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
     encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
-    # encoding("LABS", labs, ["COMPONENT_ID"])
+    encoding("LABS", labs, ["MEAL"])
     encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
              "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
 
