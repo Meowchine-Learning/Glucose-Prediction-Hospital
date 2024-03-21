@@ -181,6 +181,7 @@ if __name__ == '__main__':
 
     data = combine(encounters, admit)
     data = combine(data, med_admin)
+    data = combine(data, labs)
     
     write_to_csv(data, "data_processed")
 
