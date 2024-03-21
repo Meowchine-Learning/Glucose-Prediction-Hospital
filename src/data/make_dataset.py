@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import datetime
+import csv
+
 
 
 def main():
@@ -34,6 +36,7 @@ def main():
     # encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
     process_meal_time(labs)
+    dataset_tcn(encounters,labs)
 
 
     for key in df_map.keys():
@@ -115,6 +118,67 @@ def process_meal_time(df):
     len_before = len(df)
     df.query('MEAL != "other"', inplace=True)
     print(f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
+
+
+def dataset_tcn(encounters, labs):
+    merged_df = pd.merge(encounters, labs, on='STUDY_ID')
+    id_counts = merged_df['STUDY_ID'].value_counts()
+    merged_df = merged_df[merged_df["STUDY_ID"].isin(id_counts[id_counts>3].index)]
+    merged_df.drop(columns=['HOSP_ADMSN_TOD','HOSP_DISCHRG_TOD','ENCOUNTER_NUM_y','MEAL'])
+
+    tod1,tod2,tod3 = [],[],[]
+    glucose1, glucose2, glucose3=[],[],[]
+    td1, td2, td3 = [],[],[]
+    
+
+    # id = merged_df['STUDY_ID'][0]
+    df = 0
+    combined_df = merged_df.groupby("STUDY_ID")
+    with open('output_file.csv', 'a', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+
+        # Write headers to the CSV file
+        csv_writer.writerow(['TOD1', 'Glucose1', 'TD1', 'TOD2', 'Glucose2', 'TD2', 'TOD3', 'Glucose3', 'TD3'])
+        for group_key, group_indices in  merged_df.groupby("STUDY_ID").groups.items():
+            first_index = group_indices[0]
+            for i in range(len(group_indices)-2): # (0,2)  0,1 [3,4,5,6]
+                # group = merged_df.iloc[i:i+3]
+                tod1 = merged_df.iloc[i]["RESULT_TOD"]
+                tod2 = merged_df.iloc[i+1]["RESULT_TOD"]
+                tod3 = merged_df.iloc[i+2]["RESULT_TOD"]
+                glucose1 = merged_df.iloc[i]["GLUCOSE (mmol/L)"]
+                glucose2 = merged_df.iloc[i+1]["GLUCOSE (mmol/L)"]
+                glucose3 = merged_df.iloc[i+2]["GLUCOSE (mmol/L)"]
+                # print("i: ", i, first_index)
+                # if i==0:
+                #     td1 = 0
+                # else:
+                # td1 = merged_df.iloc[i]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i-1]["RESULT_HRS_FROM_ADMIT"]
+                td1=0
+                td2 = merged_df.iloc[i+1]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i]["RESULT_HRS_FROM_ADMIT"]
+                td3 = merged_df.iloc[i+2]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i+1]["RESULT_HRS_FROM_ADMIT"]
+                
+                csv_writer.writerow([tod1, glucose1, td1, tod2, glucose2, td2, tod3, glucose3, td3])
+
+                
+                # print(tod1,glucose1, td1, tod2,glucose2, td2, tod3, glucose3 , td3)
+            
+
+
+
+
+    # for index, row in merged_df.iterrows():
+    #     print(index)
+    #     print(row)
+    #     print(row["GLUCOSE (mmol/L)"])
+    #     break
+
+
+
+
+
+
+
 
 
 
