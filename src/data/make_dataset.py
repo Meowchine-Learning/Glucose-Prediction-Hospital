@@ -25,12 +25,12 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    encoding("ENCOUNTERS",encounters, ["SEX"])
-    encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
-    encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["COMPONENT_ID"])
-    encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
+    #encoding("ENCOUNTERS",encounters, ["SEX"])
+    #encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
+    #encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
+    #encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
+    #encoding("LABS", labs, ["COMPONENT_ID"])
+    #encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
 
     for key in df_map.keys():
@@ -141,7 +141,7 @@ def clean_admit(df):
              "Pump thrombosis": "T82.9",
              "Bacteremia/Mitral Vegetation": "I05.9",
              "Penetrating Ulcer - Distal Aortic Arch": "I70.0",
-             "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
+             "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; Reimplant of CRT-D with new RV and LV leads": "I05.9",
              "liver biopsy VAD patient": "Z95", "VAD patient for generator change Monday": "Z45.00,Z95", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9", "VAD work- up": "Z13.6", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9"
              }
 

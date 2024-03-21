@@ -67,7 +67,6 @@ def preprocess_ADMIT(filePath_ADMIT):
         else:
             icds = row['CURRENT_ICD10_LIST'].split('.')
             df.iloc[index, 2] = icds[0]
-            
     
     return df
 
@@ -125,27 +124,6 @@ def preprocess_LABS(filePath_LABS):
     return df
 
 
-def combine(data, comb_sheet):
-    for column in comb_sheet:
-        if column != 'STUDY_ID' and column != 'ENCOUNTER_NUM':
-            data[column] = np.nan
-    for index, row in data.iterrows():
-        matching = comb_sheet.loc[(comb_sheet['STUDY_ID'] == row['STUDY_ID']) & (comb_sheet['ENCOUNTER_NUM'] == row['ENCOUNTER_NUM'])].reset_index()
-        for comb_index, comb_row in matching.iterrows():
-            for column in comb_sheet:
-                if column != 'STUDY_ID' and column != 'ENCOUNTER_NUM':
-                        row[column] = comb_row[column]
-            new_row = row.to_frame().transpose()
-            if comb_index == 0:
-                data.iloc[index] = new_row
-            else:
-                data = pd.concat([data, new_row])
-        print(index)
-    data.reset_index(inplace=True)
-    return data
-
-
-
 def write_to_csv(df_file, name):
     df_file.to_csv("data/"+name+".csv", index=None, header=True)
 
@@ -166,25 +144,16 @@ if __name__ == '__main__':
           ...
   """
 
+    encounters = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv").drop_duplicates()
+    write_to_csv(encounters, "processed_encounters")
 
-    encounters = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
-    # write_to_csv(encounters, "processed_encounters")
+    med_admin = preprocess_MEDICATION_ADMIN("data/MEDICATION_ADMINISTRATIONS.csv").drop_duplicates()
+    write_to_csv(med_admin, "processed_med_admin")
 
-    med_admin = preprocess_MEDICATION_ADMIN("data/MEDICATION_ADMINISTRATIONS.csv")
-    # write_to_csv(med_admin, "processed_med_admin")
+    admit = preprocess_ADMIT("data/ADMIT_DX.csv").drop_duplicates()
+    write_to_csv(admit, "processed_admit")
 
-    admit = preprocess_ADMIT("data/ADMIT_DX.csv")
-    # write_to_csv(admit, "processed_admit")
-
-    labs = preprocess_LABS("data/LABS.csv")
-    # write_to_csv(labs, "processed_labs")
-
-    data = combine(encounters, admit)
-    data = combine(data, med_admin)
-    data = combine(data, labs)
+    labs = preprocess_LABS("data/LABS.csv").drop_duplicates()
+    write_to_csv(labs, "processed_labs")
     
-    write_to_csv(data, "data_processed")
-
-    
-
     # calc_avg_mealtime("data/LABS.csv")
