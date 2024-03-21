@@ -9,68 +9,86 @@ def main():
         "data/ACCESS 1853 Dataset update 20240228.xlsx", sheet_name=None)
 
     encounters = df_map["ENCOUNTERS"]
+    encounters = encounters.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM'], ascending=[True, True])
     admit_dx = df_map["ADMIT_DX"]
+    admit_dx = admit_dx.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM'], ascending=[True, True])
     or_proc_orders = df_map["OR_PROC_ORDERS"]
+    or_proc_orders = or_proc_orders.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'PROCEDURE_START_HRS_FROM_ADMIT'], ascending=[True, True, True])
     orders_activity = df_map["ORDERS_ACTIVITY"]
+    orders_activity = orders_activity.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
     orders_nutrition = df_map["ORDERS_NUTRITION"]
+    orders_nutrition = orders_nutrition.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
+    med_orders = df_map["MEDICATION_ORDERS"]
+    med_orders = med_orders.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'ORDER_HRS_FROM_ADMIT'], ascending=[True, True, True])
     labs = df_map["LABS"]
+    labs = labs.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'RESULT_HRS_FROM_ADMIT'], ascending=[True, True, True])
     med_admin = df_map["MEDICATION_ADMINISTRATIONS"]
+    med_admin = med_admin.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'TAKEN_HRS_FROM_ADMIT'], ascending=[True, True, True])
     pin = df_map["PIN"]
+    pin = pin.sort_values(
+        by=['STUDY_ID', 'ENCOUNTER_NUM', 'DISP_DAYS_PRIOR'], ascending=[True, True, True])
 
     clean_encounters(encounters)
     clean_admit(admit_dx)
     clean_or_proc_orders(or_proc_orders)
-    clean_orders_activiy(orders_activity)
-    clean_orders_nutrition(orders_nutrition)
-    clean_labs(labs)
-    clean_med_admin(med_admin)
     clean_pin(pin)
+
+    exclusion_ranges = clean_med_admin(med_admin)
+    orders_activity = clean_orders_activiy(orders_activity, exclusion_ranges)
+    orders_nutrition = clean_orders_nutrition(
+        orders_nutrition, exclusion_ranges)
+    labs = clean_labs(labs, exclusion_ranges)
 
     process_meal_time(labs)
 
-    # encoding("ENCOUNTERS",encounters, ["SEX"])
-    # encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    # encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
-    # encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
+    encoding("ENCOUNTERS", encounters, ["SEX"])
+    encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
+    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
+    encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
     # encoding("LABS", labs, ["COMPONENT_ID"])
-    # encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
-
-    
-
-
-    for key in df_map.keys():
-        write_to_csv(df_map[key], key)
+    encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
+             "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
 
 
-def encoding(name,df,column_list):
+def encoding(name, df, column_list):
     def preprocess_column(column):
         # Convert numerical values to strings
         column = column.astype(str)
         return column
-    if column_list[0]== "CURRENT_ICD10_LIST":
+    if column_list[0] == "CURRENT_ICD10_LIST":
         # Example usage
         df["CURRENT_ICD10_LIST"] = preprocess_column(df["CURRENT_ICD10_LIST"])
 
     for column in column_list:
         # Perform one-hot encoding
         categories = df[column].unique()
-        np_column = df[column].values.flatten()  # numpy array 
-        categories = np.unique(np_column)  # categories 
-        category_index = {category: index for index, category in enumerate(categories)}
+        np_column = df[column].values.flatten()  # numpy array
+        categories = np.unique(np_column)  # categories
+        category_index = {category: index for index,
+                          category in enumerate(categories)}
         one_hot_encoded = []
 
         for i in range(len(np_column)):
             data = np_column[i]
-            one_hot = [0] * len(categories) # [0,0]
-            index = np.where(data==categories)[0][0]
+            one_hot = [0] * len(categories)  # [0,0]
+            index = np.where(data == categories)[0][0]
             one_hot[index] = 1
             one_hot_encoded.append(one_hot)
-        
+
         # Replace the values in the "SEX" column with one-hot encoded values
         df[column] = one_hot_encoded
 
         # Write DataFrame to CSV
         write_to_csv(df, name)
+
 
 def process_meal_time(df):
     # filter for glucose measurements
@@ -90,7 +108,7 @@ def process_meal_time(df):
         lunch_end = datetime.time(14, 0)
         supper_start = datetime.time(16, 0)
         supper_end = datetime.time(19, 0)
-        
+
         if breakfast_start <= time <= breakfast_end:
             return "breakfast"
         elif lunch_start <= time <= lunch_end:
@@ -99,10 +117,7 @@ def process_meal_time(df):
             return "supper"
         else:
             return "other"
-    
-    # group by STUDY_ID, sort measurements by HRS_FROM_ADMIT
-    df.sort_values(by=['STUDY_ID', 'RESULT_HRS_FROM_ADMIT'], inplace=True)
-    
+
     # for row in filtered_labs:
     df['MEAL'] = df['RESULT_TOD'].apply(classify_time)
 
@@ -110,15 +125,15 @@ def process_meal_time(df):
     df.reset_index(drop=True, inplace=True)
     for i in range(1, len(df)):
         if df.at[i, 'STUDY_ID'] == df.at[i-1, 'STUDY_ID'] and \
-            df.at[i, 'MEAL'] == df.at[i-1, 'MEAL'] and \
-            df.at[i, 'RESULT_HRS_FROM_ADMIT'] - df.at[i-1, 'RESULT_HRS_FROM_ADMIT'] < 12: # also check that the hours from admit are not more than 12h apart to avoid classifying different days as the same meal
-                df.at[i-1, 'MEAL'] = "other"
+                df.at[i, 'MEAL'] == df.at[i-1, 'MEAL'] and \
+                df.at[i, 'RESULT_HRS_FROM_ADMIT'] - df.at[i-1, 'RESULT_HRS_FROM_ADMIT'] < 12:  # also check that the hours from admit are not more than 12h apart to avoid classifying different days as the same meal
+            df.at[i-1, 'MEAL'] = "other"
     # drop rows with MEAL == "other"
     len_before = len(df)
     df.query('MEAL != "other"', inplace=True)
-    print(f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
-    
-        
+    print(
+        f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
+
 
 def clean_encounters(df):
     # drop A1C columns
@@ -193,7 +208,7 @@ def clean_admit(df):
              "Pump thrombosis": "T82.9",
              "Bacteremia/Mitral Vegetation": "I05.9",
              "Penetrating Ulcer - Distal Aortic Arch": "I70.0",
-             "EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
+             r"EXTRACTION, ELECTRODE LEAD, CARDIAC, USING LASER; \Reimplant of CRT-D with new RV and LV leads": "I05.9",
              "liver biopsy VAD patient": "Z95", "VAD patient for generator change Monday": "Z45.00,Z95", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9", "VAD work- up": "Z13.6", "REMOVAL, ELECTRODE LEAD, ICD [1072379]": "I05.9"
              }
 
@@ -229,12 +244,16 @@ def clean_or_proc_orders(df):
             'PROCEDURE_COMP_TOD', 'PROCEDURE_COMP_HRS_FROM_ADMIT', 'ANESTHESIA_STOP_TOD', 'ANESTHESIA_STOP_HRS_FROM_ADMIT'], axis=1, inplace=True)
 
 
-def clean_orders_activiy(df):
+def clean_orders_activiy(df, exclusion_ranges):
     # drop PROC_NAME, ORDER_PROC_ID
     df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
+    df = df[df.apply(
+        lambda row: is_within_exclusion_range(row, 'ORDER_HRS_FROM_ADMIT', exclusion_ranges), axis=1)]
+
+    return df
 
 
-def clean_orders_nutrition(df):
+def clean_orders_nutrition(df, exclusion_ranges):
     # drop PROC_NAME, ORDER_PROC_ID
     df.drop(['PROC_NAME', 'ORDER_PROC_ID'], axis=1, inplace=True)
 
@@ -242,9 +261,12 @@ def clean_orders_nutrition(df):
     empty_discon = df[(df['ORDER_DISCON_TOD'].notnull()) == False].index
 
     df.drop(empty_discon, axis=0, inplace=True)
+    df = df[df.apply(
+        lambda row: is_within_exclusion_range(row, 'ORDER_HRS_FROM_ADMIT', exclusion_ranges), axis=1)]
+    return df
 
 
-def clean_labs(df):
+def clean_labs(df, exclusion_ranges):
     pd.DataFrame.dropna(df)
     # drop COMPONENT_NAME, EXTERNAL_NAME, REFERENCE_UNIT
     df.drop(['COMPONENT_NAME', 'EXTERNAL_NAME',
@@ -254,6 +276,9 @@ def clean_labs(df):
     empty_ord = df[(df['ORD_VALUE'].notnull()) == False].index
 
     df.drop(empty_ord, axis=0, inplace=True)
+    df = df[df.apply(
+        lambda row: is_within_exclusion_range(row, 'RESULT_HRS_FROM_ADMIT', exclusion_ranges), axis=1)]
+    return df
 
 
 def clean_med_admin(df):
@@ -338,9 +363,6 @@ def clean_med_admin(df):
     med_routes = {4000287: "oral", 124838: "subcutaneous", 2365: "intravenous", 4002245: "intravenous",
                   6000183: "intravenous", 174845: "oral", 2365: "intravenous", 33009: "oral"}
 
-    # insulin_list = ["17405", "28534", "30080", "124838", "124845", "124847", "124854", "124857", "125482", "130342", "134056", "162674", "166114", "169138", "199429", "4002243",
-    #                "4002245", "4002455", "4002541", "4002722", "4002723", "4002884", "4002908", "4002909", "6000598", "6001625", "6002910", "6004503", "6004606"]
-
     # get rows where route is empty
     list = df[(df['ROUTE'].notnull()) == False].index
 
@@ -352,9 +374,79 @@ def clean_med_admin(df):
     empty_vals = df[(df['SIG'].notnull()) == False].index
     df.drop(empty_vals, axis=0, inplace=True)
 
+    exclusion_ranges = find_IV_times(df)
+
     # drop columns
     df.drop(['MEDICATION_ID', 'MEDICATION_NAME', 'INFUSION_RATE',
             'INFUSION_RATE_UNIT', 'STRENGTH'], axis=1, inplace=True)
+
+    return exclusion_ranges
+
+
+def find_IV_times(med_admin_df):
+
+    # IV insulins we want to exclude
+    insulin_names = ["INSULIN REGULAR (HUMULIN R) 1 UNIT/ML (100 UNIT) IN NACL 0.9% 100 ML INFUSION BAG",
+                     "ZZZ_INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN NACL 0.9% 100 ML (RN)", "INSULIN REGULAR (HUMULIN R) 1 UNIT/ML IN D5W 100 ML", "INSULIN LISPRO (HUMALOG) IN NACL 0.9% 50 ML BAG (FLOOR)"]
+
+    # dataframe with only rows with those meds
+    insulin_df = med_admin_df[(med_admin_df['MEDICATION_NAME'] ==
+                               insulin_names[0]) | (med_admin_df['MEDICATION_NAME'] ==
+                                                    insulin_names[1])]
+
+    # actions which can mean a new medication was started
+    start_continuous_actions = ["Restarted", "Continued from OR",
+                                "Continued from Pre-op", "Given", "New Bag", "Rate Change"]
+
+    start_time, stop_time = 0, 0
+    exclusion_ranges = {}
+    start_med = ""
+    id = ""
+    for _, row in insulin_df.iterrows():
+        # if the ID or encounter number changes, reset
+        if id != str(row["STUDY_ID"])+'_'+str(row["ENCOUNTER_NUM"]):
+            id = str(row["STUDY_ID"])+'_'+str(row["ENCOUNTER_NUM"])
+            start_time, stop_time = 0, 0
+            exclusion_ranges[id] = []
+
+        action = row["MAR_ACTION"]
+        start_med = row["MEDICATION_NAME"]
+        # case 1: start action
+        if action == "Given":   # Non-continouous case
+            start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+            stop_time = start_time + 1
+            exclusion_ranges[id].append([start_time, stop_time])
+        if action in start_continuous_actions:
+            if start_time == 0:  # ensures first administration, or given after a full start, stop cycle occured
+                start_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+                stop_time = -1
+                if start_med == insulin_names[-1]:
+                    stop_time = start_time + 1
+        # case 2: stop action
+        if action == "Stopped":
+            if start_time == 0:  # error cases
+                try:
+                    if stop_time == 0:  # case a: "Stopped" after admission, before any starts
+                        start_time = 0
+                    else:               # case b: else
+                        start_time = exclusion_ranges[id][-1][1]
+                        exclusion_ranges.pop()
+                except:
+                    pass
+            stop_time = float(row["TAKEN_HRS_FROM_ADMIT"])
+            exclusion_ranges[id].append([start_med, start_time, stop_time])
+            start_time = 0
+    return exclusion_ranges
+
+
+def is_within_exclusion_range(row, col, exclusion_ranges):
+    key = str(row['STUDY_ID'])+'_'+str(row['ENCOUNTER_NUM'])
+    time = row[col]
+    if key in exclusion_ranges:
+        for _, start_time, stop_time in exclusion_ranges[key]:
+            if start_time <= time <= stop_time:
+                return False  # Exclude this row
+    return True  # Keep this row
 
 
 def clean_pin(df):
@@ -365,12 +457,6 @@ def clean_pin(df):
 
 def write_to_csv(df_file, name):
     df_file.to_csv("data/"+name+".csv", index=None, header=True)
-
-
-def preprocess_data(df_file, name):
-    pass
-
-
 
 
 if __name__ == "__main__":
