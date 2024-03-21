@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime
 
 
 def main():
@@ -39,17 +40,20 @@ def main():
     clean_admit(admit_dx)
     clean_or_proc_orders(or_proc_orders)
     clean_pin(pin)
+
     exclusion_ranges = clean_med_admin(med_admin)
     orders_activity = clean_orders_activiy(orders_activity, exclusion_ranges)
     orders_nutrition = clean_orders_nutrition(
         orders_nutrition, exclusion_ranges)
     labs = clean_labs(labs, exclusion_ranges)
 
+    process_meal_time(labs)
+
     encoding("ENCOUNTERS", encounters, ["SEX"])
     encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
     encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
     encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["COMPONENT_ID"])
+    # encoding("LABS", labs, ["COMPONENT_ID"])
     encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
              "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
 
@@ -84,6 +88,51 @@ def encoding(name, df, column_list):
 
         # Write DataFrame to CSV
         write_to_csv(df, name)
+
+
+def process_meal_time(df):
+    # filter for glucose measurements
+    # 885 is the COMPONENT_ID for glucose
+    df.query('COMPONENT_ID == 885', inplace=True)
+    df.drop('COMPONENT_ID', axis=1, inplace=True)
+    # rename ORD_VALUE to GLUCOSE (mmol/L)
+    df.rename(columns={'ORD_VALUE': 'GLUCOSE (mmol/L)'}, inplace=True)
+
+    # Breakfast: 8:00 AM - 9:30 AM. Lunch: 12:30 AM - 1:30 PM. Supper: 5:00 PM - 6:30 PM
+    # breakfast ∈ [7:00, 10:00], lunch ∈ [11:00, 14:00], supper ∈ [16:00, 19:00]
+
+    def classify_time(time):
+        breakfast_start = datetime.time(7, 0)
+        breakfast_end = datetime.time(10, 0)
+        lunch_start = datetime.time(11, 0)
+        lunch_end = datetime.time(14, 0)
+        supper_start = datetime.time(16, 0)
+        supper_end = datetime.time(19, 0)
+
+        if breakfast_start <= time <= breakfast_end:
+            return "breakfast"
+        elif lunch_start <= time <= lunch_end:
+            return "lunch"
+        elif supper_start <= time <= supper_end:
+            return "supper"
+        else:
+            return "other"
+
+    # for row in filtered_labs:
+    df['MEAL'] = df['RESULT_TOD'].apply(classify_time)
+
+    # only keep the last row in any close consecutive breakfast, lunch, or supper measurements
+    df.reset_index(drop=True, inplace=True)
+    for i in range(1, len(df)):
+        if df.at[i, 'STUDY_ID'] == df.at[i-1, 'STUDY_ID'] and \
+                df.at[i, 'MEAL'] == df.at[i-1, 'MEAL'] and \
+                df.at[i, 'RESULT_HRS_FROM_ADMIT'] - df.at[i-1, 'RESULT_HRS_FROM_ADMIT'] < 12:  # also check that the hours from admit are not more than 12h apart to avoid classifying different days as the same meal
+            df.at[i-1, 'MEAL'] = "other"
+    # drop rows with MEAL == "other"
+    len_before = len(df)
+    df.query('MEAL != "other"', inplace=True)
+    print(
+        f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
 
 
 def clean_encounters(df):
