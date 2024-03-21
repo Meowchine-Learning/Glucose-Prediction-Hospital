@@ -173,7 +173,7 @@ def preprocess_01_ENCOUNTERS(DATA, filePath_01_ENCOUNTERS) -> dict:
     HEIGHT_CM = list(map(float, _getTableColumn(data_01_ENCOUNTERS, 6)))
     AGE = list(map(int, _getTableColumn(data_01_ENCOUNTERS, 7)))
     SEX_str = _getTableColumn(data_01_ENCOUNTERS, 8)
-    SEX = [0 if case == "MALE" else 1 for case in SEX_str]
+    SEX = [0 if case == "Male" else 1 for case in SEX_str]
     del SEX_str
 
     for idx, value in enumerate(STUDY_ID):
