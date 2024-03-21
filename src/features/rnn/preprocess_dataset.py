@@ -3,6 +3,8 @@ import numpy as np
 import csv
 
 TIME_INTERVAL = 24
+ATC_CUT_FLAG = True
+ATC_CUT_LEN = 3
 
 '''
 def calc_avg_mealtime(filePath_LABS):
@@ -48,7 +50,25 @@ def preprocess_ENCOUNTERS(filePath_ENCOUNTERS):
 
 def preprocess_ADMIT(filePath_ADMIT):
     df = pd.read_csv(filePath_ADMIT)
-    # nothing for now...
+    df.drop(['DIAGNOSIS_LINE'], axis=1, inplace=True)
+
+    for index, row in df.iterrows():
+        icds = row['CURRENT_ICD10_LIST'].split(',')
+        if len(icds) > 1:
+            for i in range(len(icds)):
+                icds[i] = icds[i].strip()
+                icd = icds[i].split('.')[0]
+
+                if i == 0:
+                    df.iloc[index, 2] = icd
+                else:
+                    row.loc[['CURRENT_ICD10_LIST']] = icd
+                    new_row = row.to_frame().transpose()
+                    df = pd.concat([df, new_row])
+        else:
+            icds = row['CURRENT_ICD10_LIST'].split('.')
+            df.iloc[index, 2] = icds[0]
+            
     
     return df
 
@@ -68,6 +88,11 @@ def preprocess_MEDICATION_ADMIN(filePath_MEDICATION_ADMIN):
     taken_hrs = df.loc[:, "TAKEN_HRS_FROM_ADMIT"]
     taken_intvs = split_time(taken_hrs)
     df["TAKEN_HRS_FROM_ADMIT"] = taken_intvs["TAKEN_HRS_FROM_ADMIT"].values
+
+    if ATC_CUT_FLAG:
+        for index, row in df.iterrows():
+            atc = row['MEDICATION_ATC'][:ATC_CUT_LEN]
+            df.iloc[index, 2] = atc
 
     return df
 
