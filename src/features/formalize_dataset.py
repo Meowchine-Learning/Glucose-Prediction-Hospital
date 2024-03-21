@@ -116,7 +116,17 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
                 # Med
                 idxMedDict = ONEHOT_DICT["Med"].index(action.split("|")[0].split("=")[1]) # find the index of this Med
                 DATA[uniqueSampleID]["Med"][idxMedDict] = float(action.split("|")[1].split("=")[1]) # and assign the corresponding sig
-            
+        
+        for RTime in range(1, RTimeMax):
+            prDayNum = (ATime + RTime - 1) // 24
+            prDayTime = (ATime + RTime - 1) % 24
+            prUniqueSampleID = f"{sampleKey}|{str(prDayNum)}|{str(prDayTime)}"
+            dayNum = (ATime + RTime) // 24
+            dayTime = (ATime + RTime) % 24
+            uniqueSampleID = f"{sampleKey}|{str(dayNum)}|{str(dayTime)}"
+            if all(x == 0 for x in DATA[uniqueSampleID]["LabTests"]):
+                # if all the value in current time is 0, use the previous value
+                DATA[uniqueSampleID]["LabTests"] = DATA[prUniqueSampleID]["LabTests"]
 
     print("\t> Sequence Data Formalized.")
     return DATA
