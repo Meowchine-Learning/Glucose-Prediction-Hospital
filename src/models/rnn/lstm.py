@@ -17,53 +17,45 @@ from keras.callbacks import ModelCheckpoint
 from keras.losses import MeanSquaredError
 from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
+
+'''Local file'''
+from create_final_data import *
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating data for model:
-
-csv_path = None #path to main csv file
-df = pd.read_csv(csv_path)
-
-def df_to_X_y(df, window_size=12):
-    df_as_np = df.to_numpy()
-    X = []
-    y = []
-
-    for i in range(len(df_as_np)-window_size):
-        row = [[a] for a in df_as_np[i:i+window_size]] #all data from window_size number of previous meals
-        X.append(row)
-        label = df_as_np[i+window_size("glucose_level")] #glucose level in the next meal
-        y.append(label)
-    return np.array(X), np.array(y)
-
-X, y = df_to_X_y(df)
-X.shape, y.shape
-
-val1 = None
-val2 = None
+X,y = lstm_data()
+X = tf.squeeze(X, axis=2) 
+print(X)
+val1 = 15582
+val2 = 24131
 X_train, y_train = X[:val1],y[:val1]
 X_val, y_val = X[val1:val2],y[val1:val2]
-X_test, y_test = X[val2],y[val2:]
-X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
+X_test, y_test = X[val2:],y[val2:]
+
+print()
+print("-----------------------------------")
+print("Checking shape:")
+print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape)
+print("-----------------------------------")
+print()
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating LSTM model:
 
 lstm_model = Sequential()
-lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape(1), X_train.shape(2)), return_sequences = True))
+lstm_model.add(LSTM(64, activation='relu', input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = True))
 lstm_model.add(LSTM(32, activation='relu', return_sequences = False))
-lstm_model.add(Dropout(rate=0.2))
 lstm_model.add(Dense(1, "linear"))
 
 lstm_model.summary()
 
-cp = ModelCheckpoint('models/lstm_model/', save_best_only = True)
+cp = ModelCheckpoint('models/rnn/models/lstm_model/', save_best_only = True)
 lstm_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.0001), metrics = [RootMeanSquaredError()])
 
-lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbakcs=[cp])
+lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbacks=[cp])
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Testing:
 
 '''Loading Model: '''
-lstm_model = load_model("models/lstm_model/")
+lstm_model = load_model("models/rnn/models/lstm_model/")
 
 '''Performance on training data: '''
 train_predictions = lstm_model.predict(X_train).flatten()
