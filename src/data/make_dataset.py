@@ -59,6 +59,7 @@ def main():
     # encoding("LABS", labs, ["COMPONENT_ID"])
     encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
              "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
+    dataset_tcn(encounters,labs)
 
 
 def encoding(name, df, column_list):
