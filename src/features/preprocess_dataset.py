@@ -15,7 +15,7 @@ def _dataInput_csv(filePath: str) -> list:
     return IN
 
 
-def _dataOutput_json(DATA, dirPath: str = "src/features/output") -> None:
+def _dataOutput_json(DATA, dirPath: str = "output") -> None:
     FEATURE_DATA = {}
     SEQUENCE_DATA = {}
     ONEHOT_DICT = {
@@ -112,7 +112,7 @@ def _dataOutput_json(DATA, dirPath: str = "src/features/output") -> None:
     for item in ONEHOT_DICT["Lab"]:
         count_dict[item] = count_dict.get(item, 0) + 1
     filtered_dict = {key: value for key, value in count_dict.items() if value > 10}
-    print(filtered_dict)
+    #print(filtered_dict)
     ONEHOT_DICT["Lab"] = list(filtered_dict.keys())
     
     for key, value in ONEHOT_DICT.items():
@@ -407,7 +407,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
 
     # Create Encoders
     if toReload_ACTIONS_d2vModel:
-        ACTIONS_d2vModel = Doc2Vec.load("src/features/encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel = Doc2Vec.load("encoders/ACTIONS_d2vModel.pkl")
     else:
         ACTIONS_Documents = []
         for ID in DATA.keys():
@@ -418,10 +418,10 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                    window=6,
                                    min_count=1,
                                    workers=10)
-        ACTIONS_d2vModel.save("src/features/encoders/ACTIONS_d2vModel.pkl")
+        ACTIONS_d2vModel.save("encoders/ACTIONS_d2vModel.pkl")
 
     if toReload_DRUGS_d2vModel:
-        DRUGS_d2vModel = Doc2Vec.load("src/features/encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel = Doc2Vec.load("encoders/DRUGS_d2vModel.pkl")
     else:
         DRUGS_Documents = []
         for ID in DATA.keys():
@@ -434,7 +434,7 @@ def preprocess_10_MEDICATION_ADMINISTRATIONS_and_12_PIN(DATA, filePath_10_MEDICA
                                  window=6,
                                  min_count=1,
                                  workers=10)
-        DRUGS_d2vModel.save("src/features/encoders/DRUGS_d2vModel.pkl")
+        DRUGS_d2vModel.save("encoders/DRUGS_d2vModel.pkl")
 
     # Encoding Processes:
     for idx, value in enumerate(STUDY_ID_10):
@@ -502,8 +502,6 @@ def preprocessData() -> dict:
 
 
 if __name__ == '__main__':
-
-
 
     """ Data Cleaning and Preprocessing """
     dataPreprocessed = preprocessData()

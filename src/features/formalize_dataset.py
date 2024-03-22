@@ -160,10 +160,11 @@ def formalizeSequenceData(DATA, FEATURE_DATA, SEQUENCE_DATA):
                 DATA[uniqueSampleID]["Nutrition"][idxNutriDict] = 1  # assign the nutrition onehot
             elif action.split("|")[0].split("=")[0] == "LAB_TYPE":
                 # LabTests
-                idxLabDict = ONEHOT_DICT["Lab"].index(
-                    action.split("|")[0].split("=")[1])  # find the index of this Lab,
-                DATA[uniqueSampleID]["LabTests"][idxLabDict] = float(
-                    action.split("|")[1].split("=")[1])  # and assign the corresponding result
+                if action.split("|")[0].split("=")[1] in ONEHOT_DICT["Lab"]:
+                    idxLabDict = ONEHOT_DICT["Lab"].index(
+                        action.split("|")[0].split("=")[1])  # find the index of this Lab,
+                    DATA[uniqueSampleID]["LabTests"][idxLabDict] = float(
+                        action.split("|")[1].split("=")[1])  # and assign the corresponding result
             elif action.split("|")[0].split("=")[0] == "MEDICATION_TYPE":
                 # Med
                 idxMedDict = ONEHOT_DICT["Med"].index(action.split("|")[0].split("=")[1])  # find the index of this Med
