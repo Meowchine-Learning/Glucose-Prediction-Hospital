@@ -28,15 +28,18 @@ def main():
     clean_med_admin(med_admin)
     clean_pin(pin)
 
-    # encoding("ENCOUNTERS",encounters, ["SEX"])
+    encoding("ENCOUNTERS",encounters, ["SEX"])
     # encoding("OR_PROC_ORDERS",or_proc_orders, ["OR_PROC_ID"])
-    # encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
+    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"] )
     # encoding("ORDERS_NUTRITION",orders_nutrition, ["PROC_ID"])
     # encoding("LABS", labs, ["COMPONENT_ID"])
     # encoding("MEDICATION_ADMINISTRATIONS", med_admin, ["MEDICATION_ATC","MAR_ACTION","DOSE_UNIT","ROUTE"])
 
     process_meal_time(labs)
     dataset_tcn(encounters,labs)
+
+    print("Length of unique STUDY_ID values in ORDERS_ACTIVITY :", orders_activity['STUDY_ID'].nunique())
+
 
 
     for key in df_map.keys():
@@ -124,61 +127,70 @@ def dataset_tcn(encounters, labs):
     merged_df = pd.merge(encounters, labs, on='STUDY_ID')
     id_counts = merged_df['STUDY_ID'].value_counts()
     merged_df = merged_df[merged_df["STUDY_ID"].isin(id_counts[id_counts>3].index)]
-    merged_df.drop(columns=['HOSP_ADMSN_TOD','HOSP_DISCHRG_TOD','ENCOUNTER_NUM_y','MEAL'])
+    merged_df = merged_df.drop(columns=["ENCOUNTER_NUM_x",'HOSP_ADMSN_TOD','HOSP_DISCHRG_TOD','ENCOUNTER_NUM_y','MEAL'])
 
     tod1,tod2,tod3 = [],[],[]
     glucose1, glucose2, glucose3=[],[],[]
     td1, td2, td3 = [],[],[]
     
-
-    # id = merged_df['STUDY_ID'][0]
     df = 0
-    combined_df = merged_df.groupby("STUDY_ID")
-    with open('output_file.csv', 'a', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
+    new_data = [] 
+    print("merged_df")
+    merged_df.reset_index(drop=True, inplace=True)
+    
+    # TODO: static features: 
+    # disease
+    # OR_PROC_ID_onehot
+    # ORDERS_NUTRITION_ONEHOT
+    # ATC
 
-        # Write headers to the CSV file
-        csv_writer.writerow(['TOD1', 'Glucose1', 'TD1', 'TOD2', 'Glucose2', 'TD2', 'TOD3', 'Glucose3', 'TD3'])
-        for group_key, group_indices in  merged_df.groupby("STUDY_ID").groups.items():
-            first_index = group_indices[0]
-            for i in range(len(group_indices)-2): # (0,2)  0,1 [3,4,5,6]
-                # group = merged_df.iloc[i:i+3]
-                tod1 = merged_df.iloc[i]["RESULT_TOD"]
-                tod2 = merged_df.iloc[i+1]["RESULT_TOD"]
-                tod3 = merged_df.iloc[i+2]["RESULT_TOD"]
-                glucose1 = merged_df.iloc[i]["GLUCOSE (mmol/L)"]
-                glucose2 = merged_df.iloc[i+1]["GLUCOSE (mmol/L)"]
-                glucose3 = merged_df.iloc[i+2]["GLUCOSE (mmol/L)"]
-                # print("i: ", i, first_index)
-                # if i==0:
-                #     td1 = 0
-                # else:
-                # td1 = merged_df.iloc[i]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i-1]["RESULT_HRS_FROM_ADMIT"]
-                td1=0
-                td2 = merged_df.iloc[i+1]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i]["RESULT_HRS_FROM_ADMIT"]
-                td3 = merged_df.iloc[i+2]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[i+1]["RESULT_HRS_FROM_ADMIT"]
-                
-                csv_writer.writerow([tod1, glucose1, td1, tod2, glucose2, td2, tod3, glucose3, td3])
+    # TODO: time sequence features: 
+    # medication TAKEN_TOD, TAKEN_HRS_FROM_ADMIT,MAR_ACTION(one_hot),SIG,DOSE_UNIT,ROUTE
+    # activity ( 0/1) and activity time seq? 
 
-                
-                # print(tod1,glucose1, td1, tod2,glucose2, td2, tod3, glucose3 , td3)
+    for group_key, group_indices in  merged_df.groupby("STUDY_ID").groups.items():
+        first_index = group_indices[0]
+
+        
+        for i in range(len(group_indices)-3): # (0,2)  0,1 [3,4,5,6]
+            tod1 = merged_df.iloc[first_index+i]["RESULT_TOD"]
+            tod2 = merged_df.iloc[first_index+i+1]["RESULT_TOD"]
+            tod3 = merged_df.iloc[first_index+i+2]["RESULT_TOD"]
+            glucose1 = merged_df.iloc[first_index+i]["GLUCOSE (mmol/L)"]
+            glucose2 = merged_df.iloc[first_index+i+1]["GLUCOSE (mmol/L)"]
+            glucose3 = merged_df.iloc[first_index+i+2]["GLUCOSE (mmol/L)"]
+            td1=0
+            td2 = merged_df.iloc[first_index+i+1]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[first_index+i]["RESULT_HRS_FROM_ADMIT"]
+            td3 = merged_df.iloc[first_index+i+2]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[first_index+i+1]["RESULT_HRS_FROM_ADMIT"]
+            
+            # prediction : y 
+            glucose4 = merged_df.loc[first_index+i+3]["GLUCOSE (mmol/L)"]
+
+             # Extract static feature from -- encounter 
+            encounters = merged_df.loc[first_index + i]
+            hosp_dischrg_hrs = encounters['HOSP_DISCHRG_HRS_FROM_ADMIT']
+            weight = encounters['WEIGHT_KG']
+            height = encounters['HEIGHT_CM']
+            age = encounters['AGE']
+            sex = encounters['SEX']
+        
+            new_data.append({"STUDY_ID": group_key,
+                             'HOSP_DISCHRG_HRS_FROM_ADMIT': hosp_dischrg_hrs,
+                                'WEIGHT_KG': weight, 'HEIGHT_CM': height,
+                                'AGE': age, 'SEX': sex,
+                             'TOD1': tod1, 'GLUCOSE1': glucose1, 'TD1': td1,
+                            'TOD2': tod2, 'GLUCOSE2': glucose2, 'TD2': td2,
+                             'TOD3': tod3, 'GLUCOSE3': glucose3, 'TD3': td3,
+                             "GLUCOSE4": glucose4 })
             
 
+    
+    new_df = pd.DataFrame(new_data)
+    write_to_csv(new_df,"new_dt")   
+    print("Length of unique STUDY_ID values in new_df:", new_df['STUDY_ID'].nunique())
+ 
 
-
-
-    # for index, row in merged_df.iterrows():
-    #     print(index)
-    #     print(row)
-    #     print(row["GLUCOSE (mmol/L)"])
-    #     break
-
-
-
-
-
-
-
+   
 
 
 
