@@ -59,7 +59,8 @@ def main():
     # encoding("LABS", labs, ["COMPONENT_ID"])
     encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
              "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
-    dataset_tcn(encounters,labs)
+    
+    dataset_tcn(encounters,labs, admit_dx, or_proc_orders, orders_nutrition)
 
 
 def encoding(name, df, column_list):
@@ -141,7 +142,7 @@ def process_meal_time(df):
     print(f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
 
 
-def dataset_tcn(encounters, labs):
+def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
     merged_df = pd.merge(encounters, labs, on='STUDY_ID')
     id_counts = merged_df['STUDY_ID'].value_counts()
     merged_df = merged_df[merged_df["STUDY_ID"].isin(id_counts[id_counts>3].index)]
@@ -153,12 +154,11 @@ def dataset_tcn(encounters, labs):
     
     df = 0
     new_data = [] 
-    print("merged_df")
     merged_df.reset_index(drop=True, inplace=True)
     
     # TODO: static features: 
-    # disease
-    # OR_PROC_ID_onehot
+    # disease DONE 
+    # OR_PROC_ID_onehot done
     # ORDERS_NUTRITION_ONEHOT
     # ATC
 
@@ -174,12 +174,15 @@ def dataset_tcn(encounters, labs):
             tod1 = merged_df.iloc[first_index+i]["RESULT_TOD"]
             tod2 = merged_df.iloc[first_index+i+1]["RESULT_TOD"]
             tod3 = merged_df.iloc[first_index+i+2]["RESULT_TOD"]
+            tod4 = merged_df.iloc[first_index+i+3]["RESULT_TOD"]
             glucose1 = merged_df.iloc[first_index+i]["GLUCOSE (mmol/L)"]
             glucose2 = merged_df.iloc[first_index+i+1]["GLUCOSE (mmol/L)"]
             glucose3 = merged_df.iloc[first_index+i+2]["GLUCOSE (mmol/L)"]
             td1=0
             td2 = merged_df.iloc[first_index+i+1]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[first_index+i]["RESULT_HRS_FROM_ADMIT"]
             td3 = merged_df.iloc[first_index+i+2]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[first_index+i+1]["RESULT_HRS_FROM_ADMIT"]
+            td4 = merged_df.iloc[first_index+i+3]["RESULT_HRS_FROM_ADMIT"] -  merged_df.iloc[first_index+i+2]["RESULT_HRS_FROM_ADMIT"]
+
             
             # prediction : y 
             glucose4 = merged_df.loc[first_index+i+3]["GLUCOSE (mmol/L)"]
@@ -199,11 +202,52 @@ def dataset_tcn(encounters, labs):
                              'TOD1': tod1, 'GLUCOSE1': glucose1, 'TD1': td1,
                             'TOD2': tod2, 'GLUCOSE2': glucose2, 'TD2': td2,
                              'TOD3': tod3, 'GLUCOSE3': glucose3, 'TD3': td3,
+                             'TOD4': tod4,  'TD4': td4,
                              "GLUCOSE4": glucose4 })
             
 
     
     new_df = pd.DataFrame(new_data)
+    print(new_df)
+    # Convert lists to tuples in the 'CURRENT_ICD10_LIST' column
+    admit_dx['CURRENT_ICD10_LIST'] = admit_dx['CURRENT_ICD10_LIST'].apply(tuple)
+
+    # admit_dx 
+    admit_dx = admit_dx[['STUDY_ID', 'CURRENT_ICD10_LIST']].drop_duplicates(subset = "STUDY_ID").reset_index(drop = True)
+    print(admit_dx)
+    
+    print(new_df)
+    print(new_df.shape[0])
+    new_df = pd.merge(new_df, admit_dx, on='STUDY_ID', how='inner')
+    new_df = new_df[['STUDY_ID', 'CURRENT_ICD10_LIST'] + [col for col in new_df.columns if col != 'STUDY_ID' and col != 'CURRENT_ICD10_LIST']]
+
+    print(new_df)
+    print(new_df.shape[0])
+
+    # OR_PROC_ORDER
+    or_proc_orders = or_proc_orders[['STUDY_ID', 'OR_PROC_ID']].drop_duplicates(subset = "STUDY_ID").reset_index(drop = True)
+    print(or_proc_orders)
+    
+    print(new_df)
+    print(new_df.shape[0])
+    new_df = pd.merge(new_df, or_proc_orders, on='STUDY_ID', how='inner')
+    new_df = new_df[['STUDY_ID', 'OR_PROC_ID'] + [col for col in new_df.columns if col != 'STUDY_ID' and col != 'OR_PROC_ID']]
+
+    print(new_df)
+    print(new_df.shape[0])
+
+    # order_nutrition
+    # orders_nutrition = orders_nutrition[['STUDY_ID', 'PROC_ID']].drop_duplicates(subset = "STUDY_ID").reset_index(drop = True)
+    # print(orders_nutrition)
+    
+    # print(new_df)
+    # print(new_df.shape[0])
+    # print("-------------------------- 3")
+    # new_df = pd.merge(new_df, orders_nutrition, on='STUDY_ID', how='inner')
+    # print(new_df)
+    # print(new_df.shape[0])
+
+
     write_to_csv(new_df,"new_dt")   
     print("Length of unique STUDY_ID values in new_df:", new_df['STUDY_ID'].nunique())
  
