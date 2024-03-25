@@ -65,3 +65,14 @@ class TemporalConvNet(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+
+
+class HybridTCN(nn.Module):
+    def __init__(self, num_inputs, num_channels, kernel_size, dropout):
+        super(HybridTCN, self).__init__()
+        self.tcn = TemporalConvNet(num_inputs, num_channels, kernel_size, dropout)
+        self.linear = nn.Linear(num_channels[-1], output_size)
+
+    def forward(self, x):
+        # TODO
+        pass

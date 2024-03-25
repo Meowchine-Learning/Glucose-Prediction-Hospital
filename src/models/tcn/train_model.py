@@ -5,7 +5,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import random_split
 import pandas as pd
-import tcn
+from models.tcn.tcn import TemporalConvNet, HybridTCN
+from parse_data import *
 
 class MedicalDataset(Dataset):
     """
@@ -17,21 +18,27 @@ class MedicalDataset(Dataset):
         return self.data[index]
 
 def load_dataset():
-    df_map = pd.read_excel("data/ACCESS 1853 Dataset.xlsx", sheet_name=None)
+    # df_map = pd.read_excel("data/ACCESS 1853 Dataset.xlsx", sheet_name=None)
 
-    # sample dataset and convert 
-    encounters_dataset = MedicalDataset(df_map["ENCOUNTERS"])
+    # # sample dataset and convert 
+    # encounters_dataset = MedicalDataset(df_map["ENCOUNTERS"])
+
+    data = pd.read_csv("data/new_dt.csv")
+    # group by STUDY_ID
+    # TODO
+    # data = data.groupby('STUDY_ID')
+
     
-    # train, valid and test 
+    # train, valid and test
     train_ratio = 0.8
     val_ratio = 0.1
     test_ratio = 0.1
 
-    train_size = int(len(encounters_dataset) * train_ratio)
-    val_size = int(len(encounters_dataset) * val_ratio)
-    test_size = len(encounters_dataset) - train_size - val_size
+    train_size = int(len(data) * train_ratio)
+    val_size = int(len(data) * val_ratio)
+    test_size = len(data) - train_size - val_size
 
-    encounters_train, encounters_val = random_split(encounters_dataset, [train_size, val_size])
+    encounters_train, encounters_val = random_split(data, [train_size, val_size])
 
     return encounters_train, encounters_val
 
