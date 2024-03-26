@@ -6,14 +6,33 @@ ATC_CUT_FLAG = False
 ATC_CUT_LEN = 3
 
 
-def split_time(time_column):
-    split = np.ceil(time_column.div(TIME_INTERVAL)).astype(np.int32).to_frame()
-    return split
+def encoding(name, df, column_list):
+    for column in column_list:
+        if column == "CURRENT_ICD10_LIST":
+            # Step 1: Split comma-separated codes and explode into separate rows
+            df_exploded = df.assign(CURRENT_ICD10_LIST=df[column].str.split(
+                ', ')).explode(column)
+
+            # Step 2: One-hot encode the exploded DataFrame
+            df_one_hot = pd.get_dummies(
+                df_exploded, columns=[column], prefix='', prefix_sep='')
+
+            # Step 3: Aggregate the one-hot encoded rows back to the original row structure
+            # Summing up the one-hot encoded columns to ensure rows with multiple codes have two 1's
+            df = df_one_hot.groupby(
+                ['STUDY_ID', 'ENCOUNTER_NUM'], as_index=False).sum().apply(list)
+
+        elif column == "SEX":
+            df = pd.get_dummies(df, columns=[column], drop_first=True)
+        else:
+            df = pd.get_dummies(df, columns=[column], prefix=column)
+        # Write DataFrame to CSV
+        write_to_csv(df, name)
 
 
 def preprocess_ENCOUNTERS(filePath_ADMIT):
     df = pd.read_csv(filePath_ADMIT)
-    df.drop(["HOSP_ADMSN_TOD", "HOSP_DISCHRG_TOD"],
+    df.drop(["HOSP_ADMSN_TOD", "HOSP_DISCHRG_TOD", "HOSP_DISCHRG_HRS_FROM_ADMIT"],
             axis=1, inplace=True)
     return df
 
@@ -22,25 +41,19 @@ def preprocess_ADMIT(filePath_ADMIT):
     df = pd.read_csv(filePath_ADMIT)
     df.drop(['DIAGNOSIS_LINE'], axis=1, inplace=True)
 
-    for index, row in df.iterrows():
-        icds = row['CURRENT_ICD10_LIST'].split(',')
-        if len(icds) > 1:
-            for i in range(len(icds)):
-                icds[i] = icds[i].strip()
-                icd = icds[i].split('.')[0]
+    def process_icd10_codes(cell):
+        # Split codes by comma
+        codes = cell.split(', ')
+        # Keep only the first 3 characters of each code
+        truncated_codes = [code[:3] for code in codes]
+        # Rejoin the truncated codes with commas
+        return ', '.join(truncated_codes)
 
-                if i == 0:
-                    df.iloc[index, 2] = icd
-                else:
-                    row.loc[['CURRENT_ICD10_LIST']] = icd
-                    new_row = row.to_frame().transpose()
-                    df = pd.concat([df, new_row])
-        else:
-            icds = row['CURRENT_ICD10_LIST'].split('.')
-            df.iloc[index, 2] = icds[0]
-
-    df = df.groupby(['STUDY_ID', 'ENCOUNTER_NUM'])[
-        'CURRENT_ICD10_LIST'].agg(','.join).reset_index()
+    # Apply the function to the ICD10 column
+    df['CURRENT_ICD10_LIST'] = df['CURRENT_ICD10_LIST'].apply(
+        process_icd10_codes)
+    df = df.groupby(['STUDY_ID', 'ENCOUNTER_NUM'], as_index=False)[
+        ['STUDY_ID', 'ENCOUNTER_NUM', 'CURRENT_ICD10_LIST']].agg({'CURRENT_ICD10_LIST': lambda x: ', '.join(x.unique())})
 
     return df
 
@@ -98,14 +111,15 @@ if __name__ == '__main__':
   """
 
     encounters = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
-    write_to_csv(encounters, "processed_ENCOUNTERS")
+    encoding("processed_ENCOUNTERS", encounters, ["SEX"])
 
     med_admin = preprocess_MEDICATION_ADMIN(
         "data/MEDICATION_ADMINISTRATIONS.csv")
-    write_to_csv(med_admin, "processed_MEDICATION_ADMINISTRATIONS")
+    encoding("processed_MEDICATION_ADMINISTRATIONS", med_admin, [
+             "MEDICATION_ATC"])
 
     admit = preprocess_ADMIT("data/ADMIT_DX.csv")
-    write_to_csv(admit, "processed_ADMIT_DX")
+    encoding("processed_ADMIT_DX", admit, ["CURRENT_ICD10_LIST"])
 
     labs = preprocess_LABS("data/LABS.csv")
-    write_to_csv(labs, "processed_LABS")
+    encoding("processed_LABS", labs, ["MEAL"])

@@ -1,18 +1,20 @@
 import pandas as pd
 import numpy as np
-from functools import partial
 
 
-def aggregate_meds(med_admin, row):
+def aggregate_meds(med_admin, row, atc_columns):
     # Filter the meds dataframe for this ID and meds administered before this glucose measurement time
     filtered_meds = med_admin[(med_admin['STUDY_ID'] == row['STUDY_ID']) & (
         med_admin["ENCOUNTER_NUM"] == row["ENCOUNTER_NUM"]) & (med_admin['TAKEN_HRS_FROM_ADMIT'] <= row['RESULT_HRS_FROM_ADMIT'])]
 
+    # Sum the one-hot encodings for filtered meds
+    summed_meds = filtered_meds[atc_columns].sum().clip(upper=1)
+
     # Drop the meds that have been accounted for to prevent them from being included in future rows
     med_admin.drop(filtered_meds.index, inplace=True)
 
-    # Return the list of medications, or an empty list if none match
-    return list(filtered_meds['MEDICATION_ATC']) if not filtered_meds.empty else []
+    # Return the summed one-hot encodings as a Series (or empty Series if no meds match)
+    return summed_meds if not summed_meds.empty else pd.Series(0, index=atc_columns)
 
 
 def write_to_csv(df_file, name):
@@ -29,9 +31,14 @@ if __name__ == '__main__':
 
     write_to_csv(med_admin, "MEDICATION_ADMINISTRATIONS.csv")
 
-    # Apply the function to each row in the glucose dataframe
-    labs['INSULIN_MEDS'] = labs.apply(
-        lambda row: aggregate_meds(med_admin, row), axis=1)
+    atc_columns = [col for col in med_admin.columns if 'MEDICATION_ATC' in col]
+    for col in atc_columns:
+        labs[col] = 0
+
+    for index, row in labs.iterrows():
+        # Use a copy to avoid changing med_admin directly
+        summed_meds = aggregate_meds(med_admin.copy(), row, atc_columns)
+        labs.loc[index, atc_columns] = summed_meds.values
 
     # Merge the dynamic and static features based on ID
 
