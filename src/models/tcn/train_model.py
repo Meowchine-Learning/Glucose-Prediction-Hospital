@@ -52,7 +52,7 @@ def load_dataset():
     # # sample dataset and convert 
     # encounters_dataset = MedicalDataset(df_map["ENCOUNTERS"])
 
-    data = pd.read_csv("data/new_dt.csv")
+    data = pd.read_csv("data/new_dt.csv")  # 
     # group by STUDY_ID
     # TODO
     # data = data.groupby('STUDY_ID')
@@ -68,7 +68,8 @@ def load_dataset():
     val_size = int(len(data) * val_ratio)
     test_size = len(data) - train_size - val_size
 
-    encounters_train, encounters_val = random_split(data, [train_size, val_size])
+    encounters_train, encounters_val = random_split(data, [train_size, val_size +test_size])
+    print(encounters_train)
     print(type(encounters_train))
 
     return encounters_train, encounters_val
@@ -118,7 +119,7 @@ def train(model, train_dataset, valid_dataset, device):
         eval(valid_loader,model,"Validation", device)
     
 
-    # Gettign result model
+    # Getting result model
     results = dict(
         model=model
     )

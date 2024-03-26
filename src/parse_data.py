@@ -20,24 +20,25 @@ SEQ_START_COL = 8
 
 def split_sequential(tensor:torch.Tensor):
     '''
-    Splits the input data instance tensor into sequential and static components, and target glucose
+    Splits the input data batch tensor into sequential and static components, and target glucose
     Args:
-        tensor: torch.Tensor - the input data instance tensor
+        tensor: torch.Tensor - the input data batch tensor
         Returns:
         x_sequential: torch.Tensor - the sequential data tensor containing TOD1, TD1, glucose1, TOD2, TD2, glucose2, TOD3, TD3, glucose3
         x_static: torch.Tensor - the static data tensor containing the patient's attributes
-        target: torch.float - the target glucose value
+    Returns:
+        target: torch.Tensor - the target glucose value (batch_size, 1)
     '''
-    slice1 = tensor[SEQ_START_COL:] 
-    slice2 = tensor[-3:-1]
-    x_sequential = torch.cat((slice1, slice2))
-    target = tensor[-1]
+    slice1 = tensor[:, SEQ_START_COL:]
+    slice2 = tensor[:, -3:-1]
+    x_sequential = torch.cat((slice1, slice2), dim=1)
+    target = tensor[:, -1]
     x_static = tensor[:, :SEQ_START_COL]
-    assert x_sequential.shape == (9)
+    assert x_sequential.shape[1] == 9
     
     # Reshape the x_sequential tensor to a 3x3 tensor
     # the rows of this tensor are the time steps
     # the columns are the TOD, TD, and glucose
-    x_sequential = x_sequential.view(3, 3)
+    x_sequential = x_sequential.view(-1, 3, 3)
     
     return x_sequential, x_static, target
