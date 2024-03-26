@@ -39,6 +39,9 @@ def preprocess_ADMIT(filePath_ADMIT):
             icds = row['CURRENT_ICD10_LIST'].split('.')
             df.iloc[index, 2] = icds[0]
 
+    df = df.groupby(['STUDY_ID', 'ENCOUNTER_NUM'])[
+        'CURRENT_ICD10_LIST'].agg(','.join).reset_index()
+
     return df
 
 

@@ -24,6 +24,7 @@ if __name__ == '__main__':
     encounters = pd.read_csv("data/processed_ENCOUNTERS.csv")
     admit = pd.read_csv("data/processed_ADMIT_DX.csv")
     labs = pd.read_csv("data/processed_LABS.csv", index_col=False)
+
     med_admin = pd.read_csv("data/processed_MEDICATION_ADMINISTRATIONS.csv")
 
     write_to_csv(med_admin, "MEDICATION_ADMINISTRATIONS.csv")
