@@ -5,8 +5,37 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import random_split
 import pandas as pd
-from models.tcn.tcn import TemporalConvNet, HybridTCN
-from parse_data import *
+from tcn import TemporalConvNet, HybridTCN
+# from parse_data import *
+import os
+print(os.getcwd())
+
+
+SEQ_START_COL = 8
+
+def split_sequential(tensor:torch.Tensor):
+    '''
+    Splits the input data instance tensor into sequential and static components, and target glucose
+    Args:
+        tensor: torch.Tensor - the input data instance tensor
+        Returns:
+        x_sequential: torch.Tensor - the sequential data tensor containing TOD1, TD1, glucose1, TOD2, TD2, glucose2, TOD3, TD3, glucose3
+        x_static: torch.Tensor - the static data tensor containing the patient's attributes
+        target: torch.float - the target glucose value
+    '''
+    slice1 = tensor[SEQ_START_COL:] 
+    slice2 = tensor[-3:-1]
+    x_sequential = torch.cat((slice1, slice2))
+    target = tensor[-1]
+    x_static = tensor[:, :SEQ_START_COL]
+    assert x_sequential.shape == (9)
+    
+    # Reshape the x_sequential tensor to a 3x3 tensor
+    # the rows of this tensor are the time steps
+    # the columns are the TOD, TD, and glucose
+    x_sequential = x_sequential.view(3, 3)
+    
+    return x_sequential, x_static, target
 
 class MedicalDataset(Dataset):
     """
@@ -27,6 +56,7 @@ def load_dataset():
     # group by STUDY_ID
     # TODO
     # data = data.groupby('STUDY_ID')
+    print(type(data))
 
     
     # train, valid and test
@@ -39,6 +69,7 @@ def load_dataset():
     test_size = len(data) - train_size - val_size
 
     encounters_train, encounters_val = random_split(data, [train_size, val_size])
+    print(type(encounters_train))
 
     return encounters_train, encounters_val
 
@@ -87,9 +118,18 @@ def train(model, train_dataset, valid_dataset, device):
         eval(valid_loader,model,"Validation", device)
     
 
-def TCN(device):
+    # Gettign result model
+    results = dict(
+        model=model
+    )
+
+    return results
     
-    model = TemporalConvNet(num_inputs, num_channels = 1)
+
+def TCN(device):
+    num_inputs = 3
+    num_channels = [16,32,64]
+    # model = HybridTCN(num_inputs, num_channels = num_channels)
     train_dataset, valid_dataset = load_dataset()
 
     results = train(model, train_dataset, valid_dataset, device)
@@ -101,4 +141,10 @@ n_epochs = 50
 n_splits =  5
 learning_rate =  1e-3
 log_interval = 100
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+results = TCN(device)
+model = results['model']
+
+print(model)
 
