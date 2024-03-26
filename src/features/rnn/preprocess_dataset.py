@@ -2,16 +2,8 @@ import pandas as pd
 import numpy as np
 
 TIME_INTERVAL = 24
-ATC_CUT_FLAG = True
+ATC_CUT_FLAG = False
 ATC_CUT_LEN = 3
-
-'''
-def calc_avg_mealtime(filePath_LABS):
-    LABS_df = pd.read_csv(filePath_LABS, index_col=0)
-    col = LABS_df.loc[:, "RESULT_TOD"]
-
-    out = list(col[col.str.contains("^([5-9]|10|11):.*$")])
-'''
 
 
 def split_time(time_column):
@@ -19,31 +11,10 @@ def split_time(time_column):
     return split
 
 
-def preprocess_ENCOUNTERS(filePath_ENCOUNTERS):
-    df = pd.read_csv(filePath_ENCOUNTERS)
-    # df = data_ENCOUNTERS.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'], ascending=[True, True])
-
-    # convert time of day to fraction of day
-    hosp_adm = df.loc[:, "HOSP_ADMSN_TOD"]
-    hosp_adm_hrs = pd.to_numeric(hosp_adm.str.slice(stop=-6)).mul(60)
-    hosp_adm_mins = hosp_adm.str.slice(stop=-3)
-    hosp_adm_mins = pd.to_numeric(hosp_adm_mins.str.slice(start=-2)).add(hosp_adm_hrs).div(1440).to_frame()
-    df["HOSP_ADMSN_TOD"] = hosp_adm_mins["HOSP_ADMSN_TOD"].values
-
-    hosp_dis = df.loc[:, "HOSP_DISCHRG_TOD"]
-    hosp_dis_hrs = pd.to_numeric(hosp_dis.str.slice(stop=-6)).mul(60)
-    hosp_dis_mins = hosp_dis.str.slice(stop=-3)
-    hosp_dis_mins = pd.to_numeric(hosp_dis_mins.str.slice(start=-2)).add(hosp_dis_hrs).div(1440).to_frame()
-    df["HOSP_DISCHRG_TOD"] = hosp_dis_mins["HOSP_DISCHRG_TOD"].values
-
-    # divide total hours by time interval
-    hospital_hrs = df.loc[:, "HOSP_DISCHRG_HRS_FROM_ADMIT"]
-    hospital_intvs = split_time(hospital_hrs)
-    df["HOSP_DISCHRG_HRS_FROM_ADMIT"] = hospital_intvs["HOSP_DISCHRG_HRS_FROM_ADMIT"].values
-
-    # rows = hospital_intvs.to_numpy().sum()
-    # dataset = [[] for i in range(1, rows)]
-
+def preprocess_ENCOUNTERS(filePath_ADMIT):
+    df = pd.read_csv(filePath_ADMIT)
+    df.drop(["HOSP_ADMSN_TOD", "HOSP_DISCHRG_TOD"],
+            axis=1, inplace=True)
     return df
 
 
@@ -67,26 +38,17 @@ def preprocess_ADMIT(filePath_ADMIT):
         else:
             icds = row['CURRENT_ICD10_LIST'].split('.')
             df.iloc[index, 2] = icds[0]
-            
-    
+
     return df
 
 
 def preprocess_MEDICATION_ADMIN(filePath_MEDICATION_ADMIN):
     df = pd.read_csv(filePath_MEDICATION_ADMIN)
-    # df = data_MEDICATION_ADMIN.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'],ascending=[True, True])
-    
-    # convert time of day to fraction of day
-    taken_tod = df.loc[:, "TAKEN_TOD"]
-    taken_tod_hrs = pd.to_numeric(taken_tod.str.slice(stop=-6)).mul(60)
-    taken_tod_mins = taken_tod.str.slice(stop=-3)
-    taken_tod_mins = pd.to_numeric(taken_tod_mins.str.slice(start=-2)).add(taken_tod_hrs).div(1440).to_frame()
-    df["TAKEN_TOD"] = taken_tod_mins["TAKEN_TOD"].values
 
-    # divide total hours by time interval
-    taken_hrs = df.loc[:, "TAKEN_HRS_FROM_ADMIT"]
-    taken_intvs = split_time(taken_hrs)
-    df["TAKEN_HRS_FROM_ADMIT"] = taken_intvs["TAKEN_HRS_FROM_ADMIT"].values
+    insulin_names = ["A10AB01", "A10AB04", "A10AB04",
+                     "A10AC01", "A10AD04", "A10AE04", "A10AE05", "A10AE06"]
+    # dataframe with only rows with those meds
+    df = df[df['MEDICATION_ATC'].isin(insulin_names)]
 
     if ATC_CUT_FLAG:
         for index, row in df.iterrows():
@@ -98,52 +60,18 @@ def preprocess_MEDICATION_ADMIN(filePath_MEDICATION_ADMIN):
 
 def preprocess_LABS(filePath_LABS):
     df = pd.read_csv(filePath_LABS)
-    # df = data_LABS.sort_values(by=['STUDY_ID', 'ENCOUNTER_NUM'],ascending=[True, True])
-
-    # convert time of day to fraction of day
-    result_tod = df.loc[:, "RESULT_TOD"]
-    result_tod_hrs = pd.to_numeric(result_tod.str.slice(stop=-6)).mul(60)
-    result_tod_mins = result_tod.str.slice(stop=-3)
-    result_tod_mins = pd.to_numeric(result_tod_mins.str.slice(start=-2)).add(result_tod_hrs).div(1440).to_frame()
-    df["RESULT_TOD"] = result_tod_mins["RESULT_TOD"].values
-
-    # divide total hours by time interval
-    result_hrs = df.loc[:, "RESULT_HRS_FROM_ADMIT"]
-    result_intvs = split_time(result_hrs)
-    df["RESULT_HRS_FROM_ADMIT"] = result_intvs["RESULT_HRS_FROM_ADMIT"].values
 
     # convert ord value to numeric
-    df.at[20188, "ORD_VALUE"] = '33.3'
-    df.at[30111, "ORD_VALUE"] = '0.6'
-    df.at[66064, "ORD_VALUE"] = '0.6'
-    df.at[74868, "ORD_VALUE"] = '33.3'
-    df.at[82221, "ORD_VALUE"] = '33.3'
-    df.at[85492, "ORD_VALUE"] = '33.3'
-    ord_value = pd.to_numeric(df.loc[:, "ORD_VALUE"]).to_frame()
-    df["ORD_VALUE"] = ord_value["ORD_VALUE"].values
+    # df.at[20188, "ORD_VALUE"] = '33.3'
+    # df.at[30111, "ORD_VALUE"] = '0.6'
+    # df.at[66064, "ORD_VALUE"] = '0.6'
+    # df.at[74868, "ORD_VALUE"] = '33.3'
+    # df.at[82221, "ORD_VALUE"] = '33.3'
+    # df.at[85492, "ORD_VALUE"] = '33.3'
+    # ord_value = pd.to_numeric(df.loc[:, "ORD_VALUE"]).to_frame()
+    # df["ORD_VALUE"] = ord_value["ORD_VALUE"].values
 
     return df
-
-
-def combine(data, comb_sheet):
-    for column in comb_sheet:
-        if column != 'STUDY_ID' and column != 'ENCOUNTER_NUM':
-            data[column] = np.nan
-    for index, row in data.iterrows():
-        matching = comb_sheet.loc[(comb_sheet['STUDY_ID'] == row['STUDY_ID']) & (comb_sheet['ENCOUNTER_NUM'] == row['ENCOUNTER_NUM'])].reset_index()
-        for comb_index, comb_row in matching.iterrows():
-            for column in comb_sheet:
-                if column != 'STUDY_ID' and column != 'ENCOUNTER_NUM':
-                        row[column] = comb_row[column]
-            new_row = row.to_frame().transpose()
-            if comb_index == 0:
-                data.iloc[index] = new_row
-            else:
-                data = pd.concat([data, new_row])
-        print(index)
-    data.reset_index(inplace=True)
-    return data
-
 
 
 def write_to_csv(df_file, name):
@@ -166,25 +94,15 @@ if __name__ == '__main__':
           ...
   """
 
-
     encounters = preprocess_ENCOUNTERS("data/ENCOUNTERS.csv")
-    # write_to_csv(encounters, "processed_encounters")
+    write_to_csv(encounters, "processed_ENCOUNTERS")
 
-    med_admin = preprocess_MEDICATION_ADMIN("data/MEDICATION_ADMINISTRATIONS.csv")
-    # write_to_csv(med_admin, "processed_med_admin")
+    med_admin = preprocess_MEDICATION_ADMIN(
+        "data/MEDICATION_ADMINISTRATIONS.csv")
+    write_to_csv(med_admin, "processed_MEDICATION_ADMINISTRATIONS")
 
     admit = preprocess_ADMIT("data/ADMIT_DX.csv")
-    # write_to_csv(admit, "processed_admit")
+    write_to_csv(admit, "processed_ADMIT_DX")
 
     labs = preprocess_LABS("data/LABS.csv")
-    # write_to_csv(labs, "processed_labs")
-
-    data = combine(encounters, admit)
-    data = combine(data, med_admin)
-    data = combine(data, labs)
-    
-    write_to_csv(data, "data_processed")
-
-    
-
-    # calc_avg_mealtime("data/LABS.csv")
+    write_to_csv(labs, "processed_LABS")
