@@ -4,20 +4,18 @@
 '''Math libraries: '''
 # import pandas as pd
 from utils import *  # uncomment for main data
-from keras.optimizers import Adam
-from keras.metrics import MeanAbsoluteError, MeanSquaredError
-from keras.losses import MeanAbsoluteError, MeanSquaredError
-from keras.callbacks import ModelCheckpoint
-from keras.layers import *
-from keras.models import load_model
 from keras.models import Sequential
+from keras.models import load_model
+from keras.layers import *
+from keras.callbacks import ModelCheckpoint
+from keras.optimizers import Adam
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import pandas as pd
 
 '''Plotting libraries: '''
 
-'''Tensorflow libraries for GRU model: '''
+'''Tensorflow libraries for LSTM model: '''
 
 '''Local file'''
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -41,7 +39,7 @@ print()
 
 # Creating Sequential data
 print("CREATING SEQUENTIAL DATA...")
-X, y = seq_data(df, window_size=4)
+X, y = seq_data(df, window_size=8)
 print("SEQUENTIAL DATA DONE")  # uncomment for main data
 test_shape(X, y)
 
@@ -120,7 +118,6 @@ train_results = pd.DataFrame(
 
 plt.plot(train_results['Train Predictions'][:100])
 plt.plot(train_results['Actuals'][:100])
-
 '''Performance on validation data: '''
 val_predictions = lstm_model.predict(X_val).flatten()
 val_results = pd.DataFrame(
