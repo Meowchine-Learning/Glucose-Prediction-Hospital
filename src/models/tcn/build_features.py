@@ -107,6 +107,7 @@ def devide_labs(encounters,labs):
 
     # TODO: Change the tod (datetime) to hours (float)
     for col in ['RESULT_TOD1', 'RESULT_TOD2', 'RESULT_TOD3', 'RESULT_TOD4']:
+        new_labs[col] = pd.to_datetime(new_labs[col])
         new_labs[col] = new_labs[col].dt.hour + new_labs[col].dt.minute/60 + new_labs[col].dt.second/3600
     
     return new_labs

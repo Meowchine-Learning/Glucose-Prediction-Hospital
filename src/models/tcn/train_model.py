@@ -172,7 +172,7 @@ def train(model, train_dataset, valid_dataset, device):
 def TCN(device):
     num_inputs = 3
     num_channels = [16,32,64]
-    # model = HybridTCN(num_inputs, num_channels = num_channels, kernel_size= 3, dropout = 0).to(device)
+    model = HybridTCN(num_inputs, num_channels = num_channels, kernel_size= 3, dropout = 0).to(device)
     train_dataset, valid_dataset = load_dataset() # Dataset.subset
 
     results = train(model, train_dataset, valid_dataset, device)
