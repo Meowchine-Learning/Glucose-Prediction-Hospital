@@ -3,23 +3,21 @@
 
 '''Math libraries: '''
 # import pandas as pd
-from utils import *  # uncomment for main data
-from keras.optimizers import Adam
-from keras.metrics import MeanAbsoluteError, MeanSquaredError
-from keras.losses import MeanAbsoluteError, MeanSquaredError
-from keras.callbacks import ModelCheckpoint
-from keras.layers import *
-from keras.models import load_model
-from keras.models import Sequential
-import tensorflow as tf
 import matplotlib.pyplot as plt
 import pandas as pd
 
 '''Plotting libraries: '''
 
-'''Tensorflow libraries for GRU model: '''
+'''Tensorflow libraries for LSTM model: '''
+import tensorflow as tf
+from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint
+from keras.layers import *
+from keras.models import load_model
+from keras.models import Sequential
 
 '''Local file'''
+from utils import *  # uncomment for main data
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # #Create data if necessary:
 # create_data()
@@ -41,7 +39,7 @@ print()
 
 # Creating Sequential data
 print("CREATING SEQUENTIAL DATA...")
-X, y = seq_data(df, window_size=4)
+X, y = seq_data(df, window_size=8)
 print("SEQUENTIAL DATA DONE")  # uncomment for main data
 test_shape(X, y)
 
@@ -101,8 +99,8 @@ lstm_model.summary()
 
 cp = ModelCheckpoint(
     filepath='./models/rnn/models/lstm_model/', save_best_only=True)
-lstm_model.compile(loss=MeanAbsoluteError(), optimizer=Adam(
-    learning_rate=0.001), metrics=[MeanAbsoluteError()])
+lstm_model.compile(loss="mean_absolute_error", optimizer=Adam(
+    learning_rate=0.00001), metrics="mean_absolute_error")
 lstm_model.fit(X_train, y_train, validation_data=(
     X_val, y_val), epochs=10, callbacks=[cp])
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -111,7 +109,7 @@ print("TESTING MODEL ...")
 print()
 
 '''Loading Model: '''
-lstm_model = load_model("./models/rnn/models/lstm_model/")
+lstm_model = load_model(filepath="./models/rnn/models/lstm_model/")
 
 '''Performance on training data: '''
 train_predictions = lstm_model.predict(X_train).flatten()
@@ -120,7 +118,6 @@ train_results = pd.DataFrame(
 
 plt.plot(train_results['Train Predictions'][:100])
 plt.plot(train_results['Actuals'][:100])
-
 '''Performance on validation data: '''
 val_predictions = lstm_model.predict(X_val).flatten()
 val_results = pd.DataFrame(
