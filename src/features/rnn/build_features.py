@@ -47,4 +47,6 @@ if __name__ == '__main__':
     df_combined = pd.merge(df_combined, admit, on=[
                            'STUDY_ID', 'ENCOUNTER_NUM'], how='left')
 
+    df_combined = df_combined.dropna()
+
     write_to_csv(df_combined, "data_processed")
