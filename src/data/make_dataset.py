@@ -4,8 +4,6 @@ import datetime
 import datetime
 import csv
 
-
-
 def main():
 
     df_map = pd.read_excel(
@@ -62,8 +60,20 @@ def main():
     
     dataset_tcn(encounters,labs, admit_dx, or_proc_orders, orders_nutrition)
 
-
 def encoding(name, df, column_list):
+    # Convert the column to one-hot encoding
+    one_hot_encoded = pd.get_dummies(df[column_list[0]], dtype=int)
+
+    # Concatenate the one-hot encoded columns with the original DataFrame
+    data_encoded = pd.concat([df, one_hot_encoded], axis=1)
+
+    # Drop the original column if needed
+    data_encoded.drop(columns=[column_list[0]], inplace=True)
+    write_to_csv(data_encoded, name)
+
+
+
+def encoding2(name, df, column_list):
     def preprocess_column(column):
         # Convert numerical values to strings
         column = column.astype(str)
@@ -210,7 +220,7 @@ def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
     new_df = pd.DataFrame(new_data)
     print(new_df)
     # Convert lists to tuples in the 'CURRENT_ICD10_LIST' column
-    admit_dx['CURRENT_ICD10_LIST'] = admit_dx['CURRENT_ICD10_LIST'].apply(tuple)
+    # admit_dx['CURRENT_ICD10_LIST'] = admit_dx['CURRENT_ICD10_LIST'].apply(tuple)
 
     # admit_dx 
     admit_dx = admit_dx[['STUDY_ID', 'CURRENT_ICD10_LIST']].drop_duplicates(subset = "STUDY_ID").reset_index(drop = True)
