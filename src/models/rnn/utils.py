@@ -55,6 +55,11 @@ def preprocess_numerical(X,X_train,np_column_list):
         std = np.std(X_train[:, :, column])
         X[:, :, column] = (X[:, :, column] - mean) / std
     return X
+
+def convert_time_to_seconds(df,column_name):
+    df[column_name] = pd.to_timedelta(df[column_name])
+    df[column_name] = df[column_name].dt.total_seconds()
+    return df
     
 def test_shape(np_matrix_1, np_matrix_2 = []):
     print()

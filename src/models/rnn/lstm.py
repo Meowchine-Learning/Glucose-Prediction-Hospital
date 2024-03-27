@@ -6,6 +6,7 @@
 import numpy as np
 import os
 import dask.dataframe as dd
+import pandas as pd
 
 '''Plotting libraries: '''
 import matplotlib.pyplot as plt
@@ -16,8 +17,8 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.layers import *
 from keras.callbacks import ModelCheckpoint
-from keras.losses import MeanAbsoluteError
-from keras.metrics import MeanAbsoluteError
+from keras.losses import MeanAbsoluteError, MeanSquaredError
+from keras.metrics import MeanAbsoluteError, MeanSquaredError
 from keras.optimizers import Adam
 
 '''Local file'''
@@ -29,49 +30,40 @@ from utils import *          #uncomment for main data
 #Load data:
 print()
 print("LOADING DATA ...")
-df_path = "./models/rnn/combined_data.csv"                       #uncomment for main data
-df = dd.read_csv(df_path)                       #uncomment for main data
+df_path = "./data/data_processed.csv"                       #uncomment for main data
+df = pd.read_csv(df_path)                       #uncomment for main data
 print("LOADING DONE")
 print()
 
-#Preprocess data if necessary:
-print("PREPROCESSING CATEGORICAL DATA ...")
-df = df.sort_values(by=['STUDY_ID','ENCOUNTER_NUM','HOSP_DISCHRG_HRS_FROM_ADMIT'], ascending=True)
-print("SORTING DONE")
-
-numerical_list = [0,4,5,6,7,14,19,20]
-one_hot_list = ["CURRENT_ICD10_LIST","MEDICATION_ATC","MAR_ACTION","DOSE_UNIT"]
-binary_list = ["SEX", "ROUTE"]
-chunk = categorical_to_hotcolumns(df, one_hot_list)
-print("HOTCOLUMNS DONE")
-chunk = categorical_to_binary(df, binary_list)
-print("BINARY DONE")
-print("PREPROCESSING CATEGORICAL DONE")
+#Preprocess data if needed
 print()
-
+print("CONVERTING TOD ...")
+df = convert_time_to_seconds(df,"RESULT_TOD")
+print("CONVERTING DONE")
+print()
 
 #Creating Sequential data
 print("CREATING SEQUENTIAL DATA...")
-X,y = seq_data(df, window_size=15)  
+X,y = seq_data(df, window_size=4)  
 print("SEQUENTIAL DATA DONE")                     #uncomment for main data
 test_shape(X,y)
-print("CREATING SEQUENTIAL DATA DONE")
-print()
 
-val1 = 12000                #uncomment for main data
-val2 = 17000                #uncomment for main data
+val1 = 8000                #uncomment for main data
+val2 = 10000               #uncomment for main data
 X_train, y_train = X[:val1],y[:val1]                #uncomment for main data
 X_val, y_val = X[val1:val2],y[val1:val2]                #uncomment for main data
 X_test, y_test = X[val2:],y[val2:]                #uncomment for main data
 
 
 print("PREPROCESSING NUMERICAL DATA...")
+numerical_list = [2,3,4,15,16,17]
 X_train = preprocess_numerical(X_train,X_train, numerical_list)
 X_val = preprocess_numerical(X_val,X_train, numerical_list)
 X_test = preprocess_numerical(X_test, X_train, numerical_list)
 print("PREPROCESSING NUMERICAL DONE")
 print()
 
+print(y)
 
 # #test data
 # zip_path = tf.keras.utils.get_file(
@@ -107,13 +99,13 @@ print()
 lstm_model = Sequential()
 lstm_model.add(InputLayer((X.shape[1],X.shape[2])))
 lstm_model.add(LSTM(64))
-lstm_model.add(Dense(8, "relu"))
-lstm_model.add(Dense(1, "linear"))
+lstm_model.add(Dense(8, activation="relu"))
+lstm_model.add(Dense(1, activation="linear"))
 
 lstm_model.summary()
 
-cp = ModelCheckpoint('./models/rnn/models/lstm_model/', save_best_only = True)
-lstm_model.compile(loss=MeanAbsoluteError(), optimizer = Adam(learning_rate = 0.0001), metrics = [MeanAbsoluteError()])
+cp = ModelCheckpoint(filepath='./models/rnn/lstm_model/', save_best_only = True)
+lstm_model.compile(loss=MeanAbsoluteError(), optimizer = Adam(learning_rate = 0.001), metrics = [MeanAbsoluteError()])
 lstm_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbacks=[cp])
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Testing:
