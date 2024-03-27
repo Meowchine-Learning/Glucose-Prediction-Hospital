@@ -100,9 +100,9 @@ lstm_model.add(Dense(1, activation="linear"))
 lstm_model.summary()
 
 cp = ModelCheckpoint(
-    filepath='./models/rnn/models/lstm_model/', save_best_only=True)
-lstm_model.compile(loss=MeanAbsoluteError(), optimizer=Adam(
-    learning_rate=0.001), metrics=[MeanAbsoluteError()])
+    filepath='src/models/rnn/models/lstm_model/', save_best_only=True)
+lstm_model.compile(loss='mean_absolute_error', optimizer=Adam(
+    learning_rate=0.001), metrics=['mean_absolute_error'])
 lstm_model.fit(X_train, y_train, validation_data=(
     X_val, y_val), epochs=10, callbacks=[cp])
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ print("TESTING MODEL ...")
 print()
 
 '''Loading Model: '''
-lstm_model = load_model("./models/rnn/models/lstm_model/")
+lstm_model = load_model("src/models/rnn/models/lstm_model/")
 
 '''Performance on training data: '''
 train_predictions = lstm_model.predict(X_train).flatten()
@@ -134,5 +134,7 @@ test_predictions = lstm_model.predict(X_test).flatten()
 test_results = pd.DataFrame(
     data={"Train Predictions": test_predictions, 'Actuals': y_test})
 
-plt.plot(test_results['Train Predictions'][:100])
-plt.plot(test_results['Actuals'][:100])
+plt.plot(test_results['Train Predictions'][:100], label="Train Predictions")
+plt.plot(test_results['Actuals'][:100], label="Actuals")
+
+plt.savefig('src/models/rnn/models/lstm_model/training.png')
