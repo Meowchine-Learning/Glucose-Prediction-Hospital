@@ -57,7 +57,7 @@ def load_dataset():
     # group by STUDY_ID
     # TODO
     # data = data.groupby('STUDY_ID')
-    X = data.drop(columns=['GLUCOSE4'])
+    X = data.drop(columns=['GLUCOSE4','RESULT_TOD1','RESULT_TOD2','RESULT_TOD3','RESULT_TOD4'])
     y = data['GLUCOSE4']
 
     # Split features and labels
@@ -67,25 +67,25 @@ def load_dataset():
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
 
-    for col in ["OR_PROC_ID","CURRENT_ICD10_LIST","SEX"]:
-        # X_train.loc[:, col] = X_train[col].apply(lambda x: torch.tensor(ast.literal_eval(x), dtype=torch.float32))
-        # X_test.loc[:, col] = X_test[col].apply(lambda x: torch.tensor(ast.literal_eval(x), dtype=torch.float32))
-        for i in range(len(X_train[col])):
-            index_one = None
-            element_at_index_i = X_train[col].iloc[i]
-            print("element: ", element_at_index_i)
-            element_at_index_i = element_at_index_i.strip('[]')  # Remove square brackets
-            element_at_index_i = [int(x) for x in element_at_index_i.split(',')] # []
+    # for col in ["OR_PROC_ID","CURRENT_ICD10_LIST","SEX"]:
+    #     # X_train.loc[:, col] = X_train[col].apply(lambda x: torch.tensor(ast.literal_eval(x), dtype=torch.float32))
+    #     # X_test.loc[:, col] = X_test[col].apply(lambda x: torch.tensor(ast.literal_eval(x), dtype=torch.float32))
+    #     for i in range(len(X_train[col])):
+    #         index_one = None
+    #         element_at_index_i = X_train[col].iloc[i]
+    #         print("element: ", element_at_index_i)
+    #         element_at_index_i = element_at_index_i.strip('[]')  # Remove square brackets
+    #         element_at_index_i = [int(x) for x in element_at_index_i.split(',')] # []
 
-            for j,value in enumerate(element_at_index_i):
-                print("j: value", j, value)
-                if value==1:
-                    index_one = j
-                    print(index_one)
-                    break
-            X_train[col][i] = index_one
-        X_train[col] = X_train[col].astype(int)
-        print(type(X_train[col][i]))
+    #         for j,value in enumerate(element_at_index_i):
+    #             print("j: value", j, value)
+    #             if value==1:
+    #                 index_one = j
+    #                 print(index_one)
+    #                 break
+    #         X_train[col][i] = index_one
+    #     X_train[col] = X_train[col].astype(int)
+    #     print(type(X_train[col][i]))
 
     print(X_train.dtypes)
 
@@ -93,6 +93,11 @@ def load_dataset():
     X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32)
+
+    # Create TensorDataset
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+    test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+
 
 
     # train, valid and test
@@ -108,7 +113,6 @@ def load_dataset():
     # encounters_train, encounters_val = random_split(data, [train_size, val_size+test_size]) # <class 'torch.utils.data.dataset.Subset'>
     # return encounters_train, encounters_val # subset 
     # -------------------------------------------------
-    print(train_dataset)
 
     return train_dataset,test_dataset
     
