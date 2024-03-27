@@ -44,17 +44,15 @@ class GlucosePredictionModel:
             raise ValueError()
 
         _ = data[:, 0]
-        self.X = np.array(data[:, 10:], dtype=np.float32)
-        self.y = np.array(data[:, 1:10], dtype=np.float32)
+        self.X = np.array(data[:, 1:], dtype=np.float32)
+        self.y = np.array(data[:, 1], dtype=np.float32)
+        ee = 0
 
     def modelOutput(self, outputPath, DATA):
         np.save(outputPath, np.array(DATA))
         print(f"\t> Formalized Data printed to {outputPath}...")
 
     def modelTraining(self, getReport=True, saveModel=True):
-        y_885 = self.y[:, 4]
-        y_885 = y_885.reshape(-1)
-
         y_true_values = []
         y_predicted_values = []
         modelRecorder = []
@@ -67,15 +65,15 @@ class GlucosePredictionModel:
 
             # Data for Training & Validation:
             X_train = self.X[TRAIN_START:TRAIN_END]
-            y_train = y_885[TRAIN_START:TRAIN_END]
+            y_train = self.y[TRAIN_START:TRAIN_END]
             X_eval = self.X[TRAIN_END:VALIDATION_END]
-            y_eval = y_885[TRAIN_END:VALIDATION_END]
+            y_eval = self.y[TRAIN_END:VALIDATION_END]
 
             # todo - Hyperparameters for fine-tuning
             MODELS = {"rt": DecisionTreeRegressor(criterion='absolute_error',
                                                   max_depth=[5, 10, 15][0],
                                                   min_samples_split=[2, 3, 4][0]),
-                      "rf": RandomForestRegressor(criterion="entropy",
+                      "rf": RandomForestRegressor(criterion="absolute_error",
                                                   n_jobs=-1,
                                                   n_estimators=[100, 200, 300][0],
                                                   min_samples_split=[2, 3, 4][0]),
@@ -129,21 +127,17 @@ class GlucosePredictionModel:
             plt.show()
 
     def modelTest(self, getReport=True):
-        # Data for Test:
-        y_885 = self.y[:, 4]
-        y_885 = y_885.reshape(-1)
-
         # Model for Test:
         y_predict_all = self.optimalModel.predict(self.X)
-        l1_error = mean_absolute_error(y_885, y_predict_all)
+        l1_error = mean_absolute_error(self.y, y_predict_all)
 
         # Report and Visualization for Test:
         if getReport:
             print("\n\n Test Report:")
             print(f"\t* l1_error in full data test: {l1_error}")
             plt.figure(figsize=(50, 6))
-            x_axis = np.arange(len(y_885))
-            plt.plot(x_axis[:self.plotRange], y_885[:self.plotRange], color='blue', label='True Values', linewidth=1)
+            x_axis = np.arange(len(self.y))
+            plt.plot(x_axis[:self.plotRange], self.y[:self.plotRange], color='blue', label='True Values', linewidth=1)
             plt.plot(x_axis[:self.plotRange], y_predict_all[:self.plotRange], color='green', linestyle='--',
                      label='Predicted Values (TEST)', linewidth=1)
             plt.title('True vs Predicted Values (TEST)')
