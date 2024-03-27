@@ -68,11 +68,16 @@ class TemporalConvNet(nn.Module):
 
 
 class HybridTCN(nn.Module):
-    def __init__(self, num_inputs, num_channels, kernel_size, dropout):
+    def __init__(self, num_inputs_static, num_inputs_seq, num_channels_seq, kernel_size, dropout):
         super(HybridTCN, self).__init__()
-        self.tcn = TemporalConvNet(num_inputs, num_channels, kernel_size, dropout)
-        self.linear = nn.Linear(num_channels[-1], output_size)
+        self.tcn = TemporalConvNet(num_inputs_seq, num_channels_seq, kernel_size, dropout)
+        self.linear1 = nn.Linear(num_inputs_static, 64)
+        self.linear2 = nn.Linear(64+num_channels_seq[-1], 1) # 64+len(x_seq_latent) -> 1
 
-    def forward(self, x):
-        # TODO
-        pass
+    def forward(self, x_seq, x_static):
+        # Forward pass for HybridTCN
+        seq_output = self.tcn(x_seq)  # Pass sequential features through TCN
+        static_output = self.linear1(x_static)
+        combined_output = torch.cat((seq_output, static_output), dim=1)
+        final_output = self.linear2(combined_output)
+        return final_output

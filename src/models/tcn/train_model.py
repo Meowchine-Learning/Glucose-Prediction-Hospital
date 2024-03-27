@@ -53,7 +53,7 @@ def load_dataset():
     # # sample dataset and convert 
     # encounters_dataset = MedicalDataset(df_map["ENCOUNTERS"])
 
-    data = pd.read_csv("data/new_dt.csv") # <class 'pandas.core.frame.DataFrame'>
+    data = pd.read_csv("data/new_dt.csv")  #  # <class 'pandas.core.frame.DataFrame'>
     # group by STUDY_ID
     # TODO
     # data = data.groupby('STUDY_ID')
@@ -157,7 +157,7 @@ def train(model, train_dataset, valid_dataset, device):
         eval(valid_loader,model,"Validation", device)
     
 
-    # Gettign result model
+    # Getting result model
     results = dict(
         model=model
     )
