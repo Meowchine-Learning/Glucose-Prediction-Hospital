@@ -50,15 +50,20 @@ def main():
 
     process_meal_time(labs)
 
-    encoding("ENCOUNTERS", encounters, ["SEX"])
-    encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
-    encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
-    encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
-    encoding("LABS", labs, ["MEAL"])
-    encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
-             "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
+    write_to_csv(encounters, "ENCOUNTERS")
+    write_to_csv(admit_dx, "ADMIT_DX")
+    write_to_csv(med_admin, "MEDICATION_ADMINISTRATIONS")
+    write_to_csv(labs, "LABS")
+
+    # encoding("ENCOUNTERS", encounters, ["SEX"])
+    # encoding("OR_PROC_ORDERS", or_proc_orders, ["OR_PROC_ID"])
+    # encoding("ADMIT_DX", admit_dx, ["CURRENT_ICD10_LIST"])
+    # encoding("ORDERS_NUTRITION", orders_nutrition, ["PROC_ID"])
+    # encoding("LABS", labs, ["MEAL"])
+    # encoding("MEDICATION_ADMINISTRATIONS", med_admin, [
+    #          "MEDICATION_ATC", "MAR_ACTION", "DOSE_UNIT", "ROUTE"])
     
-    dataset_tcn(encounters,labs, admit_dx, or_proc_orders, orders_nutrition)
+    dataset_tcn(encounters,labs, admit_dx, or_proc_orders)
 
 def encoding(name, df, column_list):
     # Convert the column to one-hot encoding
@@ -72,8 +77,7 @@ def encoding(name, df, column_list):
     write_to_csv(data_encoded, name)
 
 
-
-def encoding2(name, df, column_list):
+def encoding2(name, df, column_list):  # delete 
     def preprocess_column(column):
         # Convert numerical values to strings
         column = column.astype(str)
@@ -152,7 +156,7 @@ def process_meal_time(df):
     print(f"*\t[process_meal_time] Dropped {len_before - len(df)} rows with meal_time == other, out of {len_before} rows.")
 
 
-def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
+def dataset_tcn(encounters, labs, admit_dx, or_proc_orders):
     merged_df = pd.merge(encounters, labs, on='STUDY_ID')
     id_counts = merged_df['STUDY_ID'].value_counts()
     merged_df = merged_df[merged_df["STUDY_ID"].isin(id_counts[id_counts>3].index)]
@@ -170,7 +174,6 @@ def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
     # disease DONE 
     # OR_PROC_ID_onehot done
     # ORDERS_NUTRITION_ONEHOT
-    # ATC
 
     # TODO: time sequence features: 
     # medication TAKEN_TOD, TAKEN_HRS_FROM_ADMIT,MAR_ACTION(one_hot),SIG,DOSE_UNIT,ROUTE
@@ -209,10 +212,10 @@ def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
                              'HOSP_DISCHRG_HRS_FROM_ADMIT': hosp_dischrg_hrs,
                                 'WEIGHT_KG': weight, 'HEIGHT_CM': height,
                                 'AGE': age, 'SEX': sex,
-                             'TOD1': tod1, 'GLUCOSE1': glucose1, 'TD1': td1,
-                            'TOD2': tod2, 'GLUCOSE2': glucose2, 'TD2': td2,
-                             'TOD3': tod3, 'GLUCOSE3': glucose3, 'TD3': td3,
-                             'TOD4': tod4,  'TD4': td4,
+                             'RESULT_TOD1': tod1, 'GLUCOSE1': glucose1, 'TD1': td1,
+                            'RESULT_TOD2': tod2, 'GLUCOSE2': glucose2, 'TD2': td2,
+                             'RESULT_TOD3': tod3, 'GLUCOSE3': glucose3, 'TD3': td3,
+                             'RESULT_TOD4': tod4,  'TD4': td4,
                              "GLUCOSE4": glucose4 })
             
 
@@ -245,18 +248,6 @@ def dataset_tcn(encounters, labs, admit_dx, or_proc_orders, orders_nutrition):
 
     print(new_df)
     print(new_df.shape[0])
-
-    # order_nutrition
-    # orders_nutrition = orders_nutrition[['STUDY_ID', 'PROC_ID']].drop_duplicates(subset = "STUDY_ID").reset_index(drop = True)
-    # print(orders_nutrition)
-    
-    # print(new_df)
-    # print(new_df.shape[0])
-    # print("-------------------------- 3")
-    # new_df = pd.merge(new_df, orders_nutrition, on='STUDY_ID', how='inner')
-    # print(new_df)
-    # print(new_df.shape[0])
-
 
     write_to_csv(new_df,"new_dt")   
     print("Length of unique STUDY_ID values in new_df:", new_df['STUDY_ID'].nunique())
