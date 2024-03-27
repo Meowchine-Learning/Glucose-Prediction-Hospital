@@ -2,8 +2,11 @@
 #Some libraries:
 
 '''Math libraries: '''
-import pandas as pd
+# import pandas as pd
 import numpy as np
+import os
+import dask.dataframe as dd
+import pandas as pd
 
 '''Plotting libraries: '''
 import matplotlib.pyplot as plt
@@ -14,50 +17,65 @@ from keras.models import Sequential
 from keras.models import load_model
 from keras.layers import *
 from keras.callbacks import ModelCheckpoint
-from keras.losses import MeanSquaredError
-from keras.metrics import RootMeanSquaredError
+from keras.losses import MeanAbsoluteError, MeanSquaredError
+from keras.metrics import MeanAbsoluteError, MeanSquaredError
 from keras.optimizers import Adam
-#----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+'''Local file'''
+from utils import *          #uncomment for main data-------------------------------------------------------------------------------------------------------------
 #Creating data for model:
 
-csv_path = None #path to main csv file
-df = pd.read_csv(csv_path)
+#Load data:
+print()
+print("LOADING DATA ...")
+df_path = "./data/data_processed.csv"                       #uncomment for main data
+df = pd.read_csv(df_path)                       #uncomment for main data
+print("LOADING DONE")
+print()
 
-def df_to_X_y(df, window_size=12):
-    df_as_np = df.to_numpy()
-    X = []
-    y = []
+#Preprocess data if needed
+print()
+print("CONVERTING TOD ...")
+df = convert_time_to_seconds(df,"RESULT_TOD")
+print("CONVERTING DONE")
+print()
 
-    for i in range(len(df_as_np)-window_size):
-        row = [[a] for a in df_as_np[i:i+window_size]] #all data from window_size number of previous meals
-        X.append(row)
-        label = df_as_np[i+window_size("glucose_level")] #glucose level in the next meal
-        y.append(label)
-    return np.array(X), np.array(y)
+#Creating Sequential data
+print("CREATING SEQUENTIAL DATA...")
+X,y = seq_data(df, window_size=4)  
+print("SEQUENTIAL DATA DONE")                     #uncomment for main data
+test_shape(X,y)
 
-X, y = df_to_X_y(df)
-X.shape, y.shape
+val1 = 8000                #uncomment for main data
+val2 = 10000               #uncomment for main data
+X_train, y_train = X[:val1],y[:val1]                #uncomment for main data
+X_val, y_val = X[val1:val2],y[val1:val2]                #uncomment for main data
+X_test, y_test = X[val2:],y[val2:]                #uncomment for main data
 
-val1 = None
-val2 = None
-X_train, y_train = X[:val1],y[:val1]
-X_val, y_val = X[val1:val2],y[val1:val2]
-X_test, y_test = X[val2],y[val2:]
-X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
+
+print("PREPROCESSING NUMERICAL DATA...")
+numerical_list = [2,3,4,15,16,17]
+X_train = preprocess_numerical(X_train,X_train, numerical_list)
+X_val = preprocess_numerical(X_val,X_train, numerical_list)
+X_test = preprocess_numerical(X_test, X_train, numerical_list)
+print("PREPROCESSING NUMERICAL DONE")
+print()
+
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Creating GRU model:
 
 gru_model = Sequential()
-gru_model.add(GRU(3,activation="tanh",recurrent_activation="sigmoid",input_shape=(X_train.shape(1),X_train.shape(2)), return_sequences= False))
+gru_model.add(InputLayer((X.shape[1],X.shape[2])))
+gru_model.add(GRU(3,activation="tanh",recurrent_activation="sigmoid", return_sequences= False))
 gru_model.add(Dropout(rate=0.2))
 gru_model.add(Dense(1))
 
 gru_model.summary()
 
 cp = ModelCheckpoint('models/gru_model/', save_best_only = True)
-gru_model.compile(loss=MeanSquaredError(), optimizer = Adam(learning_rate = 0.0001), metrics = [RootMeanSquaredError()])
+gru_model.compile(loss=MeanAbsoluteError(), optimizer = Adam(learning_rate = 0.0001), metrics = [MeanAbsoluteError()])
 
-gru_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbakcs=[cp])
+gru_model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, callbacks=[cp])
 #----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Testing:
 

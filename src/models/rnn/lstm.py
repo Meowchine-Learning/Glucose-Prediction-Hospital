@@ -63,8 +63,6 @@ X_test = preprocess_numerical(X_test, X_train, numerical_list)
 print("PREPROCESSING NUMERICAL DONE")
 print()
 
-print(y)
-
 # #test data
 # zip_path = tf.keras.utils.get_file(
 #     origin='https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip',
