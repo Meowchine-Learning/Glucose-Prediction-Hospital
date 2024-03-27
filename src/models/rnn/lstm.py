@@ -126,15 +126,23 @@ val_predictions = lstm_model.predict(X_val).flatten()
 val_results = pd.DataFrame(
     data={"Train Predictions": val_predictions, 'Actuals': y_val})
 
-plt.plot(val_results['Train Predictions'][:100])
-plt.plot(val_results['Actuals'][:100])
+plt.plot(val_results['Train Predictions'][:100],
+         label="Train Predictions", color="red")
+plt.plot(val_results['Actuals'][:100], label="Actuals", color="blue")
+plt.legend()  # Show legend to identify each line
+
+plt.savefig('src/models/rnn/models/lstm_model/train.png')
+
+plt.figure(figsize=(14, 8))
 
 '''Performance on test data: '''
 test_predictions = lstm_model.predict(X_test).flatten()
 test_results = pd.DataFrame(
     data={"Train Predictions": test_predictions, 'Actuals': y_test})
 
-plt.plot(test_results['Train Predictions'][:100], label="Train Predictions")
-plt.plot(test_results['Actuals'][:100], label="Actuals")
+plt.plot(test_results['Train Predictions'][:100],
+         label="Train Predictions", color="red")
+plt.plot(test_results['Actuals'][:100], label="Actuals", color="blue")
+plt.legend()  # Show legend to identify each line
 
-plt.savefig('src/models/rnn/models/lstm_model/training.png')
+plt.savefig('src/models/rnn/models/lstm_model/test.png')
