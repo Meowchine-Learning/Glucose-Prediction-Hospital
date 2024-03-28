@@ -12,31 +12,28 @@ print(os.getcwd())
 import numpy as np
 import ast
 
-SEQ_START_COL = 8
 
 def split_sequential(tensor:torch.Tensor):
     '''
-    Splits the input data instance tensor into sequential and static components, and target glucose
+    Splits the input data instance tensor into sequential and static components (target was already spliced out by dataloader)
     Args:
         tensor: torch.Tensor - the input data instance tensor
         Returns:
         x_sequential: torch.Tensor - the sequential data tensor containing TOD1, TD1, glucose1, TOD2, TD2, glucose2, TOD3, TD3, glucose3
         x_static: torch.Tensor - the static data tensor containing the patient's attributes
-        target: torch.float - the target glucose value
     '''
-    slice1 = tensor[SEQ_START_COL:] 
-    slice2 = tensor[-3:-1]
-    x_sequential = torch.cat((slice1, slice2))
-    target = tensor[-1]
-    x_static = tensor[:, :SEQ_START_COL]
-    assert x_sequential.shape == (9)
+    x_sequential = tensor[:, -11:-2] 
+    slice1 = tensor[:, :-11]   # First two columns: STUDY_ID, ENCOUNTER_NUM were already discarded by dataloader
+    slice2 = tensor[:, -2:]   # take TOD4, TD4 as static features
+    x_static = torch.cat((slice1, slice2), dim=1)
+    assert x_sequential.shape[1] == (9)
     
     # Reshape the x_sequential tensor to a 3x3 tensor
     # the rows of this tensor are the time steps
     # the columns are the TOD, TD, and glucose
-    x_sequential = x_sequential.view(3, 3)
+    x_sequential = x_sequential.view(-1, 3, 3)
     
-    return x_sequential, x_static, target
+    return x_sequential, x_static
 
 class MedicalDataset(Dataset):
     """
@@ -57,7 +54,7 @@ def load_dataset():
     # group by STUDY_ID
     # TODO
     # data = data.groupby('STUDY_ID')
-    X = data.drop(columns=['GLUCOSE4','RESULT_TOD1','RESULT_TOD2','RESULT_TOD3','RESULT_TOD4'])
+    X = data.drop(columns=['GLUCOSE4', 'STUDY_ID', 'ENCOUNTER_NUM'])
     y = data['GLUCOSE4']
 
     # Split features and labels
@@ -119,9 +116,10 @@ def load_dataset():
 def train_tcn(epoch,data_loader,model,optimizer, device ):
   for batch_idx, (data, target) in enumerate(data_loader):
     data = data.to(device)
+    x_static, x_seq = split_sequential(data)
     target = target.to(device)
     optimizer.zero_grad()
-    output = model(data)
+    output = model(x_static, x_seq)
     # Use MSE loss
     loss_function = nn.MSELoss()
     loss = loss_function(output, target)
@@ -139,8 +137,9 @@ def eval(data_loader,model,dataset, device):
     with torch.no_grad(): # notice the use of no_grad
         for data, target in data_loader:
             data = data.to(device)
+            x_static, x_seq = split_sequential(data)
             target = target.to(device)
-            output = model(data)
+            output = model(x_static, x_seq)
             pred = output.data.max(1, keepdim=True)[1]
             correct += pred.eq(target.data.view_as(pred)).sum()
             # MSE loss 
@@ -150,8 +149,8 @@ def eval(data_loader,model,dataset, device):
     print(dataset+'set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(loss, correct, len(data_loader.dataset), 100. * correct / len(data_loader.dataset)))
 
 def train(model, train_dataset, valid_dataset, device):
-    train_loader = DataLoader(train_dataset, batch_size_train = 200, shuffle = True)
-    valid_loader = DataLoader(valid_dataset, batch_size_valid = 200, shuffle = True)
+    train_loader = DataLoader(train_dataset, batch_size = 200, shuffle = True)
+    valid_loader = DataLoader(valid_dataset, batch_size = 200, shuffle = True)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # start training
@@ -170,10 +169,15 @@ def train(model, train_dataset, valid_dataset, device):
     
 
 def TCN(device):
-    num_inputs = 3
-    num_channels = [16,32,64]
-    model = HybridTCN(num_inputs, num_channels = num_channels, kernel_size= 3, dropout = 0).to(device)
+    num_inputs = 117
+    num_inputs_seq = 3                                      # 3 sequential measurements, 3 features each (TOD, TD, glucose)
+    num_inputs_static = num_inputs - 9
+    num_channels = [64,32,16]
+    model = HybridTCN(num_inputs_static, num_inputs_seq, num_channels_seq=num_channels).to(device)
+    train_dataset, _ = load_dataset() # Dataset.subset
     train_dataset, valid_dataset = load_dataset() # Dataset.subset
+    #TODO *****************************************************************************************************************
+    # valid_dataset = train_dataset[400] #TODO: split the dataset
 
     results = train(model, train_dataset, valid_dataset, device)
 

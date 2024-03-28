@@ -50,7 +50,7 @@ class TemporalBlock(nn.Module):
 
 
 class TemporalConvNet(nn.Module):
-    def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2):
+    def __init__(self, num_inputs, num_channels:list, kernel_size=2, dropout=0.2):
         super(TemporalConvNet, self).__init__()
         layers = []
         num_levels = len(num_channels)  # [16, 2]
@@ -68,15 +68,19 @@ class TemporalConvNet(nn.Module):
 
 
 class HybridTCN(nn.Module):
-    def __init__(self, num_inputs_static, num_inputs_seq, num_channels_seq, kernel_size, dropout):
+    def __init__(self, num_inputs_static, num_inputs_seq, num_channels_seq, kernel_size=2, dropout=0.2):
         super(HybridTCN, self).__init__()
         self.tcn = TemporalConvNet(num_inputs_seq, num_channels_seq, kernel_size, dropout)
+        self.conv = nn.Conv1d(num_channels_seq[-1], 1, 1)    # 16 -> 1
         self.linear1 = nn.Linear(num_inputs_static, 64)
-        self.linear2 = nn.Linear(64+num_channels_seq[-1], 1) # 64+len(x_seq_latent) -> 1
+        self.linear2 = nn.Linear(64 + num_channels_seq[-1]*num_inputs_seq, 1) # 64+len(x_seq_latent).flatten -> 1
 
     def forward(self, x_seq, x_static):
-        # Forward pass for HybridTCN
-        seq_output = self.tcn(x_seq)  # Pass sequential features through TCN
+        # HybridTCN combines TCN with a Fully Connected Network for static features
+        x_seq = x_seq.permute(0, 2, 1)      # (batch_size, seq_len, channels) -> (batch_size, channels, seq_len)
+        seq_output = self.tcn(x_seq)        # Pass sequential features through TCN
+        # output of TCN is (batch_size, num_channels_seq[-1], seq_len=3), flatten it for FC layer
+        seq_output = seq_output.view(seq_output.size(0), -1)
         static_output = self.linear1(x_static)
         combined_output = torch.cat((seq_output, static_output), dim=1)
         final_output = self.linear2(combined_output)
